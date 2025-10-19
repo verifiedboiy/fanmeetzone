@@ -14,6 +14,8 @@ DB_FILE = DATA_DIR / "records.json"
 UPLOADS.mkdir(exist_ok=True)
 DATA_DIR.mkdir(exist_ok=True)
 
+ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
 # ---------- Helpers ----------
 def rand_digits(n=4):
     return ''.join(random.choices(string.digits, k=n))
@@ -83,6 +85,13 @@ def celebrity():
         return redirect(url_for("passcode"))
     return render_template("celebrity_form.html")
 
+# NEW: never index session directly; pass a safe default
+    celeb = session.get("celebrity", {})
+    return render_template("celebrity_form.html", celeb=celeb)
+# Always pass a safe default to the template (avoid KeyError)
+    celeb = session.get("celebrity", {})
+    return render_template("celebrity_form.html", celeb=celeb)
+    
 @app.route("/passcode", methods=["GET","POST"])
 def passcode():
     celeb = session.get("celebrity")
