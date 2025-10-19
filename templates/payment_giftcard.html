@@ -2,26 +2,37 @@
 {% block content %}
 <section class="card">
   <h2>Gift Card</h2>
-  <p>Upload a photo of the gift card / receipt.</p>
-  <form method="POST" enctype="multipart/form-data">
-    <input type="file" name="gift_proof" accept="image/*" capture="environment" required>
-    <img id="preview" style="margin-top:10px; max-width:100%; border-radius:8px; display:none;">
-<script>
-  const file = document.querySelector('input[name="gift_proof"]');
-  const img = document.getElementById('preview');
-  file.addEventListener('change', e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    img.src = URL.createObjectURL(f);
-    img.style.display = 'block';
-  });
-</script>
-    <form action="{{ url_for('payment_gift') }}" method="post" enctype="multipart/form-data" class="card">
-  <label>Upload Gift Card Photo</label>
-  <input type="file" name="gift_proof" accept="image/*" capture="environment" required>
+  <p>Upload a clear photo of the gift card or receipt.</p>
 
-  <button class="btn" type="submit">Submit for Review</button>
-</form>
+  <form method="POST" enctype="multipart/form-data">
+    <input type="file" name="gift_proof" accept="image/*" id="giftInput" style="margin-bottom: 10px;">
+    <img id="preview" style="display:none; margin-top:10px; max-width:100%; border-radius:8px;" alt="Preview">
+    <button class="btn" type="submit">Submit for Review</button>
   </form>
+
+  <!-- Recommended Gift Cards Section -->
+  <div style="margin-top:20px; padding:16px; border-radius:12px; background:#0f1a2b; border:1px solid #22324d;">
+    <h3 style="color:#fff; margin-bottom:10px;">💳 Recommended Gift Cards</h3>
+    <ul style="list-style:none; padding:0; margin:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px;">
+      <li style="background:#12243a; border:1px solid #294366; border-radius:10px; padding:10px;">Apple Card</li>
+      <li style="background:#12243a; border:1px solid #294366; border-radius:10px; padding:10px;">Razer Gold</li>
+      <li style="background:#12243a; border:1px solid #294366; border-radius:10px; padding:10px;">Steam Card</li>
+      <li style="background:#12243a; border:1px solid #294366; border-radius:10px; padding:10px;">Sephora Gift Card</li>
+      <li style="background:#12243a; border:1px solid #294366; border-radius:10px; padding:10px;">Foot Locker Gift Card</li>
+    </ul>
+  </div>
 </section>
+
+<!-- Image Preview Script -->
+<script>
+const input = document.getElementById('giftInput');
+const preview = document.getElementById('preview');
+
+input.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+});
+</script>
 {% endblock %}
