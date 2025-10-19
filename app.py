@@ -73,12 +73,12 @@ def index():
 @app.route("/celebrity", methods=["GET","POST"])
 def celebrity():
     try:
-        # safe default so Jinja never KeyErrors
         celeb = session.get("celebrity", {})
         return render_template("celebrity_form.html", celeb=celeb)
-    except Exception:
-        cap.logger.exception("Template error on /celebrity")
-        return "Template error", 500
+    except Exception as e:
+        app.logger.exception("Template error on /celebrity")
+        # TEMP: show the exact exception in the response so we know what's wrong
+        return f"Template error: {e}", 500
 
 @app.route("/passcode", methods=["GET","POST"])
 def passcode():
