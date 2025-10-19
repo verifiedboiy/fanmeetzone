@@ -70,9 +70,15 @@ def serve_upload(fname):
 def index():
     return render_template("index.html")
 
-@app.route("/celebrity", methods=["GET", "POST"])
+@app.route("/celebrity", methods=["GET","POST"])
 def celebrity():
-    return "celebrity route OK"
+    try:
+        # safe default so Jinja never KeyErrors
+        celeb = session.get("celebrity", {})
+        return render_template("celebrity_form.html", celeb=celeb)
+    except Exception:
+        cap.logger.exception("Template error on /celebrity")
+        return "Template error", 500
 
 @app.route("/passcode", methods=["GET","POST"])
 def passcode():
