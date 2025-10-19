@@ -72,7 +72,7 @@ def index():
 
 @app.route("/celebrity", methods=["GET", "POST"])
 def celebrity():
-    if request.method == "POST":
+    return "celebrity route OK"
         celeb_name = request.form.get("celeb_name","").strip()
         celeb_img  = save_upload(request.files.get("celeb_image"))
         # 4-digit passcode we’ll ask user to confirm (not 6)
@@ -91,7 +91,7 @@ def celebrity():
 # Always pass a safe default to the template (avoid KeyError)
     celeb = session.get("celebrity", {})
     return render_template("celebrity_form.html", celeb=celeb)
-    
+
 @app.route("/passcode", methods=["GET","POST"])
 def passcode():
     celeb = session.get("celebrity")
