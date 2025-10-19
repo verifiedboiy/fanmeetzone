@@ -70,16 +70,33 @@ def serve_upload(fname):
 def index():
     return render_template("index.html")
 
-@app.route("/celebrity", methods=["GET","POST"])
+@app.route("/celebrity", methods=["GET", "POST"])
 def celebrity():
-    try:
-        celeb = session.get("celebrity", {})
-        return render_template("celebrity_form.html", celeb=celeb)
-    except Exception as e:
-        app.logger.exception("Template error on /celebrity")
-        # TEMP: show the exact exception in the response so we know what's wrong
-        return f"Template error: {e}", 500
+    if request.method == "POST":
+        celeb_name = request.form.get("celeb_name", "").strip()
+        celeb_img = request.files.get("celeb_image")
 
+        # optional: save the uploaded image
+        img_path = None
+        if celeb_img and celeb_img.filename:
+            upload_path = UPLOADS / celeb_img.filename
+            celeb_img.save(upload_path)
+            img_path = str(upload_path.name)
+
+        # generate 4-digit code
+        code4 = str(random.randint(1000, 9999))
+
+        # store in session
+        session["celebrity"] = {
+            "name": celeb_name,
+            "image_url": img_path,
+            "gen_code": code4,
+        }
+
+        return redirect(url_for("passcode"))
+
+    return render_template("celebrity_form.html")
+    
 @app.route("/passcode", methods=["GET","POST"])
 def passcode():
     celeb = session.get("celebrity")
