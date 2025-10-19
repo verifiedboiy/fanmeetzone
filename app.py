@@ -73,24 +73,6 @@ def index():
 @app.route("/celebrity", methods=["GET", "POST"])
 def celebrity():
     return "celebrity route OK"
-        celeb_name = request.form.get("celeb_name","").strip()
-        celeb_img  = save_upload(request.files.get("celeb_image"))
-        # 4-digit passcode we’ll ask user to confirm (not 6)
-        code4 = rand_digits(4)
-        session["celebrity"] = {
-            "name": celeb_name,
-            "image_url": celeb_img,
-            "gen_code": code4
-        }
-        return redirect(url_for("passcode"))
-    return render_template("celebrity_form.html")
-
-# NEW: never index session directly; pass a safe default
-    celeb = session.get("celebrity", {})
-    return render_template("celebrity_form.html", celeb=celeb)
-# Always pass a safe default to the template (avoid KeyError)
-    celeb = session.get("celebrity", {})
-    return render_template("celebrity_form.html", celeb=celeb)
 
 @app.route("/passcode", methods=["GET","POST"])
 def passcode():
