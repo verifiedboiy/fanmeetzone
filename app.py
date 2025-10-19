@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 
 # ---------- App setup ----------
 app = Flask(__name__)
-app.secret_key = os.environ.get("APP_SECRET", "dev-secret")
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
 BASE_DIR = Path(__file__).resolve().parent
 UPLOADS = BASE_DIR / "uploads"
