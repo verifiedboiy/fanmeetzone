@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Celebrity Info</h2>
+  <form method="POST" enctype="multipart/form-data">
+    <label>Full name</label>
+    <input name="celeb_name" required placeholder="e.g. Alexa Bliss">
+    <label>Upload photo (optional)</label>
+    <input type="file" name="celeb_image" accept="image/*">
+    <button class="btn" type="submit">Generate 4-digit passcode →</button>
+  </form>
+</section>
+{% endblock

@@ -1,0 +1,45 @@
+:root{
+  --bg:#0f1629; --panel:#1c2540; --text:#e8eefc; --muted:#9bb0d8; --brand:#3b82f6; --ok:#22c55e; --err:#ef4444;
+}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto}
+.topbar{display:flex;align-items:center;gap:.75rem;padding:16px 20px;background:#0b1222;border-bottom:1px solid #151e36}
+.brand{color:#fff;text-decoration:none;font-weight:700}
+.container{max-width:980px;margin:32px auto;padding:0 16px}
+.card{background:var(--panel);border:1px solid #2a365c;border-radius:14px;padding:20px;margin:0 0 20px}
+.card.big{padding:28px}
+h1,h2{margin:0 0 12px}
+label{display:block;margin:12px 0 6px;color:var(--muted)}
+input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #31406b;background:#111a34;color:var(--text)}
+input[type=file]{padding:8px;background:#0e1730}
+.btn{display:inline-block;margin-top:14px;padding:10px 16px;background:var(--brand);border:none;border-radius:10px;color:#fff;text-decoration:none;cursor:pointer}
+.btn:hover{filter:brightness(.95)}
+.error{color:var(--err)}
+.actions{display:flex;gap:12px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.foot{max-width:980px;margin:24px auto 40px;color:#7e8cb8;text-align:center}
+
+/* Fan card */
+.fan-card{border:1px solid #3a4a7a;border-radius:14px;overflow:hidden;background:#0e1630}
+.fan-card header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#101a38;border-bottom:1px solid #2a365c}
+.fan-card .title{font-weight:700}
+.fan-card .tier{font-size:12px;color:#b7c6f0;background:#1a2550;padding:6px 10px;border-radius:999px;border:1px solid #2c3a6a}
+.fan-card .body{display:grid;grid-template-columns:180px 1fr;gap:16px;padding:16px}
+.fan-card img{width:100%;height:180px;object-fit:cover;border-radius:10px;border:1px solid #2a365c}
+.fan-card footer{padding:10px 16px;border-top:1px solid #2a365c;color:#9bb0d8}
+@media (max-width:720px){.grid2,.grid3{grid-template-columns:1fr}.fan-card .body{grid-template-columns:1fr}}
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.badge.pending {
+  background-color: #ffe680;
+  color: #664d00;
+}
+.badge.verified {
+  background-color: #c6f6d5;
+  color: #22543d;
+}

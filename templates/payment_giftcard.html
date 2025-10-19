@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Gift Card</h2>
+  <p>Upload a photo of the gift card / receipt.</p>
+  <form method="POST" enctype="multipart/form-data">
+    <input type="file" name="gift_proof" accept="image/*" capture="environment" required>
+    <img id="preview" style="margin-top:10px; max-width:100%; border-radius:8px; display:none;">
+<script>
+  const file = document.querySelector('input[name="gift_proof"]');
+  const img = document.getElementById('preview');
+  file.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    img.src = URL.createObjectURL(f);
+    img.style.display = 'block';
+  });
+</script>
+    <form action="{{ url_for('payment_gift') }}" method="post" enctype="multipart/form-data" class="card">
+  <label>Upload Gift Card Photo</label>
+  <input type="file" name="gift_proof" accept="image/*" capture="environment" required>
+
+  <button class="btn" type="submit">Submit for Review</button>
+</form>
+  </form>
+</section>
+{% endblock %}

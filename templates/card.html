@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card big">
+  <h2>✅ Fan Card Generated Successfully!</h2>
+  <p>Ticket ID: <b>{{ order.ticket_id }}</b></p>
+
+  <div class="fan-card">
+    <header>
+        <header>
+  <div class="title">{{ order.celebrity.name|title }} Fan Card</div>
+  <div class="tier">{{ order.client.package|upper }}</div>
+</header>
+        {% if order.status == 'pending_verification' %}
+  <div class="badge pending">⏳ Pending Verification</div>
+{% elif order.status == 'verified' %}
+  <div class="badge verified">✅ Verified Payment</div>
+{% endif %}
+      <div class="title">{{ order.celebrity.name|title }} Fan Card</div>
+      <div class="tier">{{ order.client.package|upper }} MEMBER</div>
+    </header>
+    <div class="body">
+      <div class="left">
+        {% if order.client.image_url %}
+          <img src="{{ order.client.image_url }}" alt="Client Image">
+        {% endif %}
+      </div>
+      <div class="right">
+        <p><b>Name:</b> {{ order.client.full_name }}</p>
+        <p><b>Email:</b> {{ order.client.email }}</p>
+        <p><b>Country:</b> {{ order.client.country }}</p>
+        <p><b>DOB:</b> {{ order.client.dob }}</p>
+        <p><b>Ticket:</b> {{ order.ticket_id }}</p>
+      </div>
+    </div>
+    <footer>© FanMeetZone</footer>
+  </div>
+
+  <a class="btn" href="{{ url_for('index') }}">Back to Home</a>
+</section>
+{% endblock %}
+{% if order.status == 'pending_verification' %}
+<script>
+  (function () {
+    const tid = "{{ order.ticket_id }}";
+    async function check() {
+      try {
+        const res = await fetch(`/api/status/${tid}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.status === 'verified') {
+          // Reload to show the generated fan card immediately
+          location.reload();
+        } else if (data.status === 'rejected') {
+          // Optional: show a quick notice then reload
+          alert('Your payment was rejected. Please try another method.');
+          location.reload();
+        }
+      } catch (_) {}
+    }
+    // poll every 5 seconds while pending
+    setInterval(check, 5000);
+  })();
+</script>
+{% endif %}

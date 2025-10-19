@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>{{ celeb_name|title }} – Set Passcode</h2>
+  <p>Your generated <b>4-digit passcode</b>: <code>{{ code }}</code></p>
+  {% if error %}<p class="error">❌ {{ error }}</p>{% endif %}
+  <form method="POST">
+    <label>Re-enter the same 4-digit passcode</label>
+    <input name="code" inputmode="numeric" maxlength="4" minlength="4" required>
+    <button class="btn" type="submit">Confirm & Continue</button>
+  </form>
+</section>
+{% endblock %}

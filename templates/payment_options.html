@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Choose a Payment Method</h2>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('payment_card') }}">💳 Pay by Card (Stripe)</a>
+    <a class="btn" href="{{ url_for('payment_bank') }}">🏦 Bank Transfer</a>
+    <a class="btn" href="{{ url_for('payment_gift') }}">🎁 Gift Card</a>
+  </div>
+</section>
+{% endblock %}

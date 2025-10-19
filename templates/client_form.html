@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Client Info</h2>
+  <form method="POST" enctype="multipart/form-data">
+    <label>Upload client image</label>
+    <input type="file" name="client_image" accept="image/*">
+    <label>Full name</label><input name="full_name" required>
+    <label>Email</label><input type="email" name="email" required>
+    <label>Address</label><input name="address">
+    <div class="grid2">
+      <div><label>City</label><input name="city"></div>
+      <div><label>State</label><input name="state"></div>
+    </div>
+    <div class="grid3">
+      <div><label>Zip</label><input name="zip"></div>
+      <div><label>Country</label><input name="country"></div>
+      <div><label>DOB</label><input type="date" name="dob"></div>
+    </div>
+
+    <label>Card package</label>
+    <select name="package">
+      <option value="platinum">Platinum – $2000/yr</option>
+      <option value="premium">Premium – $1500/yr</option>
+      <option value="gold">Gold – $1200/yr</option>
+      <option value="silver">Silver – $1000/yr</option>
+      <option value="bronze">Bronze – $700/yr</option>
+      <option value="regular" selected>Regular – $500/yr</option>
+    </select>
+
+    <button class="btn" type="submit">Continue to Checkout →</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Status</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="container">
+    {% if order.status == 'pending_verification' %}
+      <section class="panel">
+        <h1>Submitted for Review ✅</h1>
+        <p>We received your gift card/receipt image. An admin will verify it shortly.</p>
+        <p><strong>Status:</strong> Pending verification</p>
+        <a class="btn" href="{{ url_for('index') }}">Back to Home</a>
+      </section>
+    {% else %}
+      <section class="panel">
+        <h1>Payment Successful 🎉</h1>
+        <p>Your payment was processed successfully.</p>
+        <a class="btn" href="{{ url_for('index') }}">Back to Home</a>
+      </section>
+    {% endif %}
+  </main>
+</body>
+</html>

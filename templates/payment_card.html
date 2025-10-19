@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Pay with Card (Stripe)</h2>
+  <p>Amount: <b>${{ PRICE_USD }}</b></p>
+  <button id="pay" class="btn">Pay Now</button>
+</section>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+  const stripe = Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
+  document.getElementById('pay').addEventListener('click', async () => {
+    const res = await fetch("{{ url_for('payment_card') }}", {method:"POST"});
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    const { error } = await stripe.redirectToCheckout({ sessionId: data.id });
+    if (error) alert(error.message);
+  });
+</script>
+{% endblock %}

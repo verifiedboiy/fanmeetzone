@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Thanks! ✅</h2>
+  <p>Your gift card is <b>pending manual verification</b>. We’ll notify you after review.</p>
+  <p><small>Ticket: {{ order.ticket_id }}</small></p>
+  <a class="btn" href="{{ url_for('index') }}">Back to Home</a>
+</div>
+{% endblock %}

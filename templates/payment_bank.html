@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Bank Transfer</h2>
+  <p>Upload proof of payment (screenshot/receipt).</p>
+  <form method="POST" enctype="multipart/form-data">
+    <input type="file" name="bank_proof" accept="image/*" required>
+    <button class="btn" type="submit">Mark as Paid & Generate Card</button>
+  </form>
+</section>
+{% endblock %}
