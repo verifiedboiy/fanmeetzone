@@ -4,10 +4,15 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from square.client import Client  # NEW
 
-# --- Square creds (env vars already set in Render) ---
-SQUARE_APP_ID = os.getenv("SQUARE_APP_ID")
-SQUARE_LOCATION_ID = os.getenv("SQUARE_LOCATION_ID")
-SQUARE_ACCESS_TOKEN = os.getenv("SQUARE_ACCESS_TOKEN")
+# ----- Square client setup -----
+SQUARE_APP_ID = os.environ.get("SQUARE_APP_ID")
+SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN")
+SQUARE_LOCATION_ID = os.environ.get("SQUARE_LOCATION_ID")
+
+square_client = Client(
+    access_token=SQUARE_ACCESS_TOKEN,
+    environment="production"
+)
 
 # Reuse one Square client
 square_client = Client(
@@ -193,7 +198,7 @@ def payment_card():
         square_app_id=SQUARE_APP_ID,            # <-- from your env
         square_location_id=SQUARE_LOCATION_ID   # <-- from your env
     )
-    
+
     # NEW: Square card charge endpoint (same client you used for ACH)
 @app.route("/api/square/pay/card", methods=["POST"])
 def square_pay_card():
