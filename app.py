@@ -2,7 +2,7 @@ import os, json, random, string
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-from square.client import Client as SquareClient
+import requests
 
 # ----- Square client setup -----
 SQUARE_APP_ID = os.environ.get("SQUARE_APP_ID")
@@ -257,7 +257,7 @@ def square_pay_bank():
     else:
         msg = (resp.get("errors") or [{}])[0].get("detail", "Payment error")
         return jsonify({"error": msg}), 400
-        
+
 # --- Manual bank transfer page (file upload proof)
 @app.route("/payment/bank", methods=["GET","POST"])
 def payment_bank():
