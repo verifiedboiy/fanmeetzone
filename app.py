@@ -2,7 +2,7 @@ import os, json, random, string
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-from square.client import Client
+from square.client import Client as SquareClient
 
 # ----- Square client setup -----
 SQUARE_APP_ID = os.environ.get("SQUARE_APP_ID")
