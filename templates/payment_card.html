@@ -1,20 +1,53 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-  <h2>Pay with Card (Stripe)</h2>
-  <p>Amount: <b>${{ PRICE_USD }}</b></p>
-  <button id="pay" class="btn">Pay Now</button>
+  <h2>Card / Debit Payment</h2>
+  <p>Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
+
+  <div id="card-container" style="padding:12px;border:1px solid #22324d;border-radius:8px;background:#0f1a2b;"></div>
+  <button id="pay-btn" class="btn" type="button" style="margin-top:12px;">Pay Now</button>
+  <div id="err" style="color:#ff7b7b;margin-top:8px;"></div>
 </section>
 
-<script src="https://js.stripe.com/v3/"></script>
+<!-- PRODUCTION Web Payments SDK -->
+<script src="https://web.squarecdn.com/v1/square.js"></script>
 <script>
-  const stripe = Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
-  document.getElementById('pay').addEventListener('click', async () => {
-    const res = await fetch("{{ url_for('payment_card') }}", {method:"POST"});
-    const data = await res.json();
-    if (data.error) { alert(data.error); return; }
-    const { error } = await stripe.redirectToCheckout({ sessionId: data.id });
-    if (error) alert(error.message);
-  });
+  (async function () {
+    const errBox = document.getElementById('err');
+    try {
+      const payments = window.Square.payments("{{ square_app_id }}", "{{ square_location_id }}");
+      const card = await payments.card();
+      await card.attach('#card-container');
+
+      document.getElementById('pay-btn').addEventListener('click', async () => {
+        errBox.textContent = '';
+        document.getElementById('pay-btn').disabled = true;
+
+        const { status, token, errors } = await card.tokenize();
+        if (status !== 'OK') {
+          errBox.textContent = (errors && errors[0] && errors[0].message) || 'Could not tokenize card.';
+          document.getElementById('pay-btn').disabled = false;
+          return;
+        }
+
+        const res = await fetch("{{ url_for('square_pay_card') }}", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token })
+        });
+        const j = await res.json();
+
+        if (res.ok && j.ok) {
+          window.location.href = j.view_url;  // go to your card view
+        } else {
+          errBox.textContent = j.error || 'Payment failed.';
+          document.getElementById('pay-btn').disabled = false;
+        }
+      });
+    } catch (e) {
+      console.error(e);
+      errBox.textContent = 'Square initialization failed.';
+    }
+  })();
 </script>
 {% endblock %}

@@ -2,6 +2,18 @@ import os, json, random, string
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from square.client import Client  # NEW
+
+# --- Square creds (env vars already set in Render) ---
+SQUARE_APP_ID = os.getenv("SQUARE_APP_ID")
+SQUARE_LOCATION_ID = os.getenv("SQUARE_LOCATION_ID")
+SQUARE_ACCESS_TOKEN = os.getenv("SQUARE_ACCESS_TOKEN")
+
+# Reuse one Square client
+square_client = Client(
+    access_token=SQUARE_ACCESS_TOKEN,
+    environment="production"
+)
 
 # ---------- App setup ----------
 app = Flask(__name__)
@@ -166,45 +178,64 @@ import stripe
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")  # set in your shell
 STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY","")
 
-@app.route("/payment/card", methods=["GET","POST"])
+# REPLACE the whole /payment/card route with this Square version
+@app.route("/payment/card", methods=["GET"])
 def payment_card():
     order = session.get("pending_order")
     if not order:
         return redirect(url_for("client"))
     price_cents = PACKAGE_PRICES.get(order["client"]["package"], 50000)
 
-    if request.method == "POST":
-        try:
-            success_url = url_for('payment_success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}'
-            cancel_url  = url_for('payment_options', _external=True)
-
-            checkout_session = stripe.checkout.Session.create(
-                mode='payment',
-                payment_method_types=['card'],
-                line_items=[{
-                    'price_data': {
-                        'currency': 'usd',
-                        'product_data': {'name': f"{order['client']['package'].capitalize()} VIP Membership"},
-                        'unit_amount': price_cents,
-                    },
-                    'quantity': 1
-                }],
-                success_url=success_url,
-                cancel_url=cancel_url,
-                metadata={
-                    "ticket_id": order["ticket_id"]
-                }
-            )
-            return jsonify({'id': checkout_session.id})
-        except Exception as e:
-            return jsonify({'error': str(e)}), 400
-
     return render_template(
         "payment_card.html",
         order=order,
-        STRIPE_PUBLISHABLE_KEY=STRIPE_PUBLISHABLE_KEY,
-        PRICE_USD=price_cents//100
+        amount_usd=price_cents // 100,
+        square_app_id=SQUARE_APP_ID,            # <-- from your env
+        square_location_id=SQUARE_LOCATION_ID   # <-- from your env
     )
+    
+    # NEW: Square card charge endpoint (same client you used for ACH)
+@app.route("/api/square/pay/card", methods=["POST"])
+def square_pay_card():
+    order = session.get("pending_order")
+    if not order:
+        return jsonify({"error": "No active order"}), 400
+
+    data = request.get_json() or {}
+    token = data.get("token")  # tokenized by Square Web Payments SDK
+    if not token:
+        return jsonify({"error": "Missing card token"}), 400
+
+    amount_cents = PACKAGE_PRICES.get(order["client"]["package"], 50000)
+    idem = f"card-{order['ticket_id']}-{int(datetime.utcnow().timestamp())}"
+
+    body = {
+        "source_id": token,
+        "idempotency_key": idem,
+        "amount_money": {"amount": amount_cents, "currency": "USD"},
+        "location_id": SQUARE_LOCATION_ID,
+        "note": f"FanMeetZone card {order['ticket_id']}",
+        "autocomplete": True,  # capture immediately
+    }
+
+    result = square_client.payments.create_payment(body)
+    if result.is_success():
+        payment_id = result.body["payment"]["id"]
+
+        # finalize order like your Stripe success did
+        order["paid"] = True
+        order["status"] = "verified"
+        order["payment_info"] = {"method": "Square Card", "payment_id": payment_id}
+        order["created_at"] = datetime.utcnow().isoformat()
+        append_record(order)
+        session.pop("pending_order", None)
+
+        view_url = url_for("view_card", ticket_id=order["ticket_id"])
+        return jsonify({"ok": True, "view_url": view_url})
+    else:
+        msg = (getattr(result, "errors", [{}])[0].get("detail")
+               if getattr(result, "errors", None) else "Payment error")
+        return jsonify({"error": msg}), 400
 
 @app.route("/payment/bank", methods=["GET","POST"])
 def payment_bank():
@@ -220,7 +251,12 @@ def payment_bank():
         append_record(order)
         session.pop("pending_order", None)
         return render_template("card.html", order=order)
-    return render_template("payment_bank.html", order=order)
+    return render_template(
+    "payment_bank.html",
+    order=order,
+    square_app_id=SQUARE_APP_ID,
+    square_location_id=SQUARE_LOCATION_ID
+)
 
 @app.route("/payment/gift", methods=["GET","POST"])
 def payment_gift():
@@ -296,6 +332,48 @@ def view_card(ticket_id):
         if r.get("ticket_id") == ticket_id:
             return render_template("card.html", order=r)
     return "Card not found", 404
+
+    @app.route("/api/square/pay/bank", methods=["POST"])
+def square_pay_bank():
+    order = session.get("pending_order")
+    if not order:
+        return jsonify({"error": "No active order"}), 400
+
+    data = request.get_json() or {}
+    token = data.get("token")
+    if not token:
+        return jsonify({"error": "Missing bank token"}), 400
+
+    # amount from selected package
+    amount_cents = PACKAGE_PRICES.get(order["client"]["package"], 50000)
+
+    # unique idempotency key per attempt
+    idem = f"ach-{order['ticket_id']}-{int(datetime.utcnow().timestamp())}"
+
+    body = {
+        "source_id": token,  # ACH bank account token from Web Payments SDK
+        "idempotency_key": idem,
+        "amount_money": {"amount": amount_cents, "currency": "USD"},
+        "location_id": SQUARE_LOCATION_ID,
+        "note": f"FanMeetZone ACH {order['ticket_id']}",
+    }
+
+    result = square_client.payments.create_payment(body)
+
+    if result.is_success():
+        payment_id = result.body["payment"]["id"]
+        # Save & close the order (pending settlement)
+        order["paid"] = False
+        order["status"] = "pending_settlement"
+        order["payment_info"] = {"method": "Square ACH", "payment_id": payment_id}
+        order["created_at"] = datetime.utcnow().isoformat()
+        append_record(order)
+        session.pop("pending_order", None)
+        return jsonify({"ok": True, "status": "pending_settlement"})
+    else:
+        msg = (getattr(result, "errors", [{}])[0].get("detail")
+               if getattr(result, "errors", None) else "Payment error")
+        return jsonify({"error": msg}), 400
 
 if __name__ == "__main__":
     app.run(debug=True)
