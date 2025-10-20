@@ -206,14 +206,58 @@ def square_pay_card():
         "autocomplete": True,
     }
 
+    # ⬇️⬇️ THIS WHOLE BLOCK MUST BE INDENTED INSIDE THE FUNCTION ⬇️⬇️
     ok, resp = square_create_payment(body)
-if ok:
-    payment_id = resp["payment"]["id"]
-    ...
-else:
-    msg = (resp.get("errors") or [{}])[0].get("detail", "Payment error")
-    return jsonify({"error": msg}), 400
+    if ok:
+        payment_id = resp["payment"]["id"]
+        order["paid"] = True
+        order["status"] = "verified"
+        order["payment_info"] = {"method": "Square Card", "payment_id": payment_id}
+        order["created_at"] = datetime.utcnow().isoformat()
+        append_record(order)
+        session.pop("pending_order", None)
+        view_url = url_for("view_card", ticket_id=order["ticket_id"])
+        return jsonify({"ok": True, "view_url": view_url})
+    else:
+        msg = (resp.get("errors") or [{}])[0].get("detail", "Payment error")
+        return jsonify({"error": msg}), 400
 
+@app.route("/api/square/pay/bank", methods=["POST"])
+def square_pay_bank():
+    order = session.get("pending_order")
+    if not order:
+        return jsonify({"error": "No active order"}), 400
+
+    data = request.get_json() or {}
+    token = data.get("token")
+    if not token:
+        return jsonify({"error": "Missing bank token"}), 400
+
+    amount_cents = PACKAGE_PRICES.get(order["client"]["package"], 50000)
+    idem = f"ach-{order['ticket_id']}-{int(datetime.utcnow().timestamp())}"
+
+    body = {
+        "source_id": token,
+        "idempotency_key": idem,
+        "amount_money": {"amount": amount_cents, "currency": "USD"},
+        "location_id": SQUARE_LOCATION_ID,
+        "note": f"FanMeetZone ACH {order['ticket_id']}",
+    }
+
+    ok, resp = square_create_payment(body)
+    if ok:
+        payment_id = resp["payment"]["id"]
+        order["paid"] = False
+        order["status"] = "pending_settlement"
+        order["payment_info"] = {"method": "Square ACH", "payment_id": payment_id}
+        order["created_at"] = datetime.utcnow().isoformat()
+        append_record(order)
+        session.pop("pending_order", None)
+        return jsonify({"ok": True, "status": "pending_settlement"})
+    else:
+        msg = (resp.get("errors") or [{}])[0].get("detail", "Payment error")
+        return jsonify({"error": msg}), 400
+        
 # --- Manual bank transfer page (file upload proof)
 @app.route("/payment/bank", methods=["GET","POST"])
 def payment_bank():
