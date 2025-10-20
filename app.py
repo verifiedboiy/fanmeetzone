@@ -9,10 +9,23 @@ SQUARE_APP_ID = os.environ.get("SQUARE_APP_ID")
 SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN")
 SQUARE_LOCATION_ID = os.environ.get("SQUARE_LOCATION_ID")
 
-square_client = Client(
-    access_token=SQUARE_ACCESS_TOKEN,
-    environment="production"
-)
+BASE_URL = "https://connect.squareup.com"  # production
+
+def square_create_payment(body: dict):
+    """Call Square Payments API via REST. Returns (ok, data_or_error)."""
+    url = f"{BASE_URL}/v2/payments"
+    headers = {
+        "Authorization": f"Bearer {SQUARE_ACCESS_TOKEN}",
+        "Content-Type": "application/json",
+        "Square-Version": "2024-08-21",  # recent Square API version
+    }
+    r = requests.post(url, headers=headers, json=body, timeout=30)
+    if r.status_code in (200, 201):
+        return True, r.json()
+    try:
+        return False, r.json()
+    except Exception:
+        return False, {"errors": [{"detail": r.text}]}
 
 # ---------- App setup ----------
 app = Flask(__name__)
@@ -193,19 +206,12 @@ def square_pay_card():
         "autocomplete": True,
     }
 
-    result = square_client.payments.create_payment(body)
-    if result.is_success():
-        payment_id = result.body["payment"]["id"]
-        order["paid"] = True
-        order["status"] = "verified"
-        order["payment_info"] = {"method": "Square Card", "payment_id": payment_id}
-        order["created_at"] = datetime.utcnow().isoformat()
-        append_record(order)
-        session.pop("pending_order", None)
-        view_url = url_for("view_card", ticket_id=order["ticket_id"])
-        return jsonify({"ok": True, "view_url": view_url})
-    msg = (getattr(result, "errors", [{}])[0].get("detail")
-           if getattr(result, "errors", None) else "Payment error")
+    ok, resp = square_create_payment(body)
+if ok:
+    payment_id = resp["payment"]["id"]
+    ...
+else:
+    msg = (resp.get("errors") or [{}])[0].get("detail", "Payment error")
     return jsonify({"error": msg}), 400
 
 # --- Manual bank transfer page (file upload proof)
