@@ -9,7 +9,6 @@ SQUARE_APP_ID = os.environ.get("SQUARE_APP_ID")
 SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN")
 SQUARE_LOCATION_ID = os.environ.get("SQUARE_LOCATION_ID")
 
-# Reuse one Square client
 square_client = Client(
     access_token=SQUARE_ACCESS_TOKEN,
     environment="production"
@@ -95,13 +94,7 @@ def celebrity():
             img_path = str(upload_path.name)
 
         code4 = str(random.randint(1000, 9999))
-
-        session["celebrity"] = {
-            "name": celeb_name,
-            "image_url": img_path,
-            "gen_code": code4,
-        }
-
+        session["celebrity"] = {"name": celeb_name, "image_url": img_path, "gen_code": code4}
         return redirect(url_for("passcode"))
 
     return render_template("celebrity_form.html")
@@ -138,19 +131,12 @@ def client():
                 "dob":       request.form.get("dob","").strip(),
                 "package":   request.form.get("package","regular"),
             }
-
-            order = {
-                "ticket_id": rand_ticket(9),
-                "celebrity": session.get("celebrity", {}),
-                "client": client_data,
-                "paid": False
-            }
+            order = {"ticket_id": rand_ticket(9), "celebrity": session.get("celebrity", {}), "client": client_data, "paid": False}
             session["pending_order"] = order
             return redirect(url_for("checkout"))
         except Exception as e:
             print(">>> /client POST error:", e)
             return "There was a problem with your submission. Please go back and try again.", 400
-
     return render_template("client_form.html")
 
 @app.route("/checkout")
@@ -168,12 +154,7 @@ def payment_options():
         return redirect(url_for("client"))
     return render_template("payment_options.html", order=order)
 
-# ----- Stripe (Checkout) -----
-import stripe
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
-STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY","")
-
-# Square card checkout page
+# --- Square card checkout page (uses Web Payments SDK in your template)
 @app.route("/payment/card", methods=["GET"])
 def payment_card():
     order = session.get("pending_order")
@@ -188,7 +169,7 @@ def payment_card():
         square_location_id=SQUARE_LOCATION_ID
     )
 
-# Square card charge API
+# --- Square Card charge API
 @app.route("/api/square/pay/card", methods=["POST"])
 def square_pay_card():
     order = session.get("pending_order")
@@ -196,7 +177,7 @@ def square_pay_card():
         return jsonify({"error": "No active order"}), 400
 
     data = request.get_json() or {}
-    token = data.get("token")  # tokenized by Square Web Payments SDK
+    token = data.get("token")
     if not token:
         return jsonify({"error": "Missing card token"}), 400
 
@@ -223,11 +204,11 @@ def square_pay_card():
         session.pop("pending_order", None)
         view_url = url_for("view_card", ticket_id=order["ticket_id"])
         return jsonify({"ok": True, "view_url": view_url})
-    else:
-        msg = (getattr(result, "errors", [{}])[0].get("detail")
-               if getattr(result, "errors", None) else "Payment error")
-        return jsonify({"error": msg}), 400
+    msg = (getattr(result, "errors", [{}])[0].get("detail")
+           if getattr(result, "errors", None) else "Payment error")
+    return jsonify({"error": msg}), 400
 
+# --- Manual bank transfer page (file upload proof)
 @app.route("/payment/bank", methods=["GET","POST"])
 def payment_bank():
     order = session.get("pending_order")
@@ -254,7 +235,6 @@ def payment_gift():
     order = session.get("pending_order")
     if not order:
         return redirect(url_for("client"))
-
     if request.method == "POST":
         proof = request.files.get("gift_proof")
         proof_url = save_upload(proof)
@@ -264,27 +244,7 @@ def payment_gift():
         append_record(order)
         session.pop("pending_order", None)
         return render_template("pending_review.html", order=order)
-
     return render_template("payment_giftcard.html", order=order)
-
-@app.route("/payment/success")
-def payment_success():
-    session_id = request.args.get("session_id")
-    if not session_id:
-        return "Missing session_id", 400
-    stripe.checkout.Session.retrieve(session_id)
-
-    order = session.get("pending_order")
-    if not order:
-        return "Order not found. Start again.", 404
-
-    order["paid"] = True
-    order["payment_info"] = {"method":"Stripe Card","session_id": session_id}
-    order["created_at"] = datetime.utcnow().isoformat()
-    append_record(order)
-    session.pop("pending_order", None)
-    order["status"] = "verified"
-    return redirect(url_for('view_card', ticket_id=order["ticket_id"]))
 
 @app.route("/_ping")
 def ping():
@@ -318,44 +278,6 @@ def view_card(ticket_id):
         if r.get("ticket_id") == ticket_id:
             return render_template("card.html", order=r)
     return "Card not found", 404
-
-# ✅ FIXED: decorator must be at column 0 (no leading spaces)
-@app.route("/api/square/pay/bank", methods=["POST"])
-def square_pay_bank():
-    order = session.get("pending_order")
-    if not order:
-        return jsonify({"error": "No active order"}), 400
-
-    data = request.get_json() or {}
-    token = data.get("token")
-    if not token:
-        return jsonify({"error": "Missing bank token"}), 400
-
-    amount_cents = PACKAGE_PRICES.get(order["client"]["package"], 50000)
-    idem = f"ach-{order['ticket_id']}-{int(datetime.utcnow().timestamp())}"
-
-    body = {
-        "source_id": token,
-        "idempotency_key": idem,
-        "amount_money": {"amount": amount_cents, "currency": "USD"},
-        "location_id": SQUARE_LOCATION_ID,
-        "note": f"FanMeetZone ACH {order['ticket_id']}",
-    }
-
-    result = square_client.payments.create_payment(body)
-    if result.is_success():
-        payment_id = result.body["payment"]["id"]
-        order["paid"] = False
-        order["status"] = "pending_settlement"
-        order["payment_info"] = {"method": "Square ACH", "payment_id": payment_id}
-        order["created_at"] = datetime.utcnow().isoformat()
-        append_record(order)
-        session.pop("pending_order", None)
-        return jsonify({"ok": True, "status": "pending_settlement"})
-    else:
-        msg = (getattr(result, "errors", [{}])[0].get("detail")
-               if getattr(result, "errors", None) else "Payment error")
-        return jsonify({"error": msg}), 400
 
 if __name__ == "__main__":
     app.run(debug=True)
