@@ -2,17 +2,12 @@ import os, json, random, string
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-from square.client import Client  # NEW
+from square.client import Client
 
 # ----- Square client setup -----
 SQUARE_APP_ID = os.environ.get("SQUARE_APP_ID")
 SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN")
 SQUARE_LOCATION_ID = os.environ.get("SQUARE_LOCATION_ID")
-
-square_client = Client(
-    access_token=SQUARE_ACCESS_TOKEN,
-    environment="production"
-)
 
 # Reuse one Square client
 square_client = Client(
@@ -24,7 +19,7 @@ square_client = Client(
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(_file_).resolve().parent
 UPLOADS = BASE_DIR / "uploads"
 DATA_DIR = BASE_DIR / "data"
 DB_FILE = DATA_DIR / "records.json"
@@ -93,17 +88,14 @@ def celebrity():
         celeb_name = request.form.get("celeb_name", "").strip()
         celeb_img = request.files.get("celeb_image")
 
-        # optional: save the uploaded image
         img_path = None
         if celeb_img and celeb_img.filename:
             upload_path = UPLOADS / celeb_img.filename
             celeb_img.save(upload_path)
             img_path = str(upload_path.name)
 
-        # generate 4-digit code
         code4 = str(random.randint(1000, 9999))
 
-        # store in session
         session["celebrity"] = {
             "name": celeb_name,
             "image_url": img_path,
@@ -113,7 +105,7 @@ def celebrity():
         return redirect(url_for("passcode"))
 
     return render_template("celebrity_form.html")
-    
+
 @app.route("/passcode", methods=["GET","POST"])
 def passcode():
     celeb = session.get("celebrity")
@@ -133,7 +125,6 @@ def client():
         return redirect(url_for("celebrity"))
     if request.method == "POST":
         try:
-            # collect client fields
             client_image_url = save_upload(request.files.get("client_image"))
             client_data = {
                 "image_url": client_image_url,
@@ -148,7 +139,6 @@ def client():
                 "package":   request.form.get("package","regular"),
             }
 
-            # build pending order in session
             order = {
                 "ticket_id": rand_ticket(9),
                 "celebrity": session.get("celebrity", {}),
@@ -180,26 +170,25 @@ def payment_options():
 
 # ----- Stripe (Checkout) -----
 import stripe
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")  # set in your shell
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY","")
 
-# REPLACE the whole /payment/card route with this Square version
+# Square card checkout page
 @app.route("/payment/card", methods=["GET"])
 def payment_card():
     order = session.get("pending_order")
     if not order:
         return redirect(url_for("client"))
     price_cents = PACKAGE_PRICES.get(order["client"]["package"], 50000)
-
     return render_template(
         "payment_card.html",
         order=order,
         amount_usd=price_cents // 100,
-        square_app_id=SQUARE_APP_ID,            # <-- from your env
-        square_location_id=SQUARE_LOCATION_ID   # <-- from your env
+        square_app_id=SQUARE_APP_ID,
+        square_location_id=SQUARE_LOCATION_ID
     )
 
-    # NEW: Square card charge endpoint (same client you used for ACH)
+# Square card charge API
 @app.route("/api/square/pay/card", methods=["POST"])
 def square_pay_card():
     order = session.get("pending_order")
@@ -220,21 +209,18 @@ def square_pay_card():
         "amount_money": {"amount": amount_cents, "currency": "USD"},
         "location_id": SQUARE_LOCATION_ID,
         "note": f"FanMeetZone card {order['ticket_id']}",
-        "autocomplete": True,  # capture immediately
+        "autocomplete": True,
     }
 
     result = square_client.payments.create_payment(body)
     if result.is_success():
         payment_id = result.body["payment"]["id"]
-
-        # finalize order like your Stripe success did
         order["paid"] = True
         order["status"] = "verified"
         order["payment_info"] = {"method": "Square Card", "payment_id": payment_id}
         order["created_at"] = datetime.utcnow().isoformat()
         append_record(order)
         session.pop("pending_order", None)
-
         view_url = url_for("view_card", ticket_id=order["ticket_id"])
         return jsonify({"ok": True, "view_url": view_url})
     else:
@@ -257,11 +243,11 @@ def payment_bank():
         session.pop("pending_order", None)
         return render_template("card.html", order=order)
     return render_template(
-    "payment_bank.html",
-    order=order,
-    square_app_id=SQUARE_APP_ID,
-    square_location_id=SQUARE_LOCATION_ID
-)
+        "payment_bank.html",
+        order=order,
+        square_app_id=SQUARE_APP_ID,
+        square_location_id=SQUARE_LOCATION_ID
+    )
 
 @app.route("/payment/gift", methods=["GET","POST"])
 def payment_gift():
@@ -274,13 +260,11 @@ def payment_gift():
         proof_url = save_upload(proof)
         order["payment_info"] = {"method": "Gift Card", "proof_url": proof_url}
         order["status"] = "pending_verification"
-        from datetime import datetime
         order["created_at"] = datetime.utcnow().isoformat()
         append_record(order)
         session.pop("pending_order", None)
         return render_template("pending_review.html", order=order)
 
-    # GET -> show the upload form
     return render_template("payment_giftcard.html", order=order)
 
 @app.route("/payment/success")
@@ -288,7 +272,6 @@ def payment_success():
     session_id = request.args.get("session_id")
     if not session_id:
         return "Missing session_id", 400
-    # verify with Stripe (optional strictness)
     stripe.checkout.Session.retrieve(session_id)
 
     order = session.get("pending_order")
@@ -300,11 +283,9 @@ def payment_success():
     order["created_at"] = datetime.utcnow().isoformat()
     append_record(order)
     session.pop("pending_order", None)
-    
-    order["status"] = "verified"   # so the badge shows for Stripe card payments
+    order["status"] = "verified"
     return redirect(url_for('view_card', ticket_id=order["ticket_id"]))
 
-# tiny health check (handy)
 @app.route("/_ping")
 def ping():
     return "ok"
@@ -338,7 +319,8 @@ def view_card(ticket_id):
             return render_template("card.html", order=r)
     return "Card not found", 404
 
-    @app.route("/api/square/pay/bank", methods=["POST"])
+# ✅ FIXED: decorator must be at column 0 (no leading spaces)
+@app.route("/api/square/pay/bank", methods=["POST"])
 def square_pay_bank():
     order = session.get("pending_order")
     if not order:
@@ -349,14 +331,11 @@ def square_pay_bank():
     if not token:
         return jsonify({"error": "Missing bank token"}), 400
 
-    # amount from selected package
     amount_cents = PACKAGE_PRICES.get(order["client"]["package"], 50000)
-
-    # unique idempotency key per attempt
     idem = f"ach-{order['ticket_id']}-{int(datetime.utcnow().timestamp())}"
 
     body = {
-        "source_id": token,  # ACH bank account token from Web Payments SDK
+        "source_id": token,
         "idempotency_key": idem,
         "amount_money": {"amount": amount_cents, "currency": "USD"},
         "location_id": SQUARE_LOCATION_ID,
@@ -364,10 +343,8 @@ def square_pay_bank():
     }
 
     result = square_client.payments.create_payment(body)
-
     if result.is_success():
         payment_id = result.body["payment"]["id"]
-        # Save & close the order (pending settlement)
         order["paid"] = False
         order["status"] = "pending_settlement"
         order["payment_info"] = {"method": "Square ACH", "payment_id": payment_id}
