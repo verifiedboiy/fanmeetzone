@@ -19,7 +19,7 @@ square_client = Client(
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
-BASE_DIR = Path(_file_).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent
 UPLOADS = BASE_DIR / "uploads"
 DATA_DIR = BASE_DIR / "data"
 DB_FILE = DATA_DIR / "records.json"
