@@ -9,13 +9,21 @@
   <div id="err" style="color:#ff7b7b;margin-top:8px;"></div>
 </section>
 
-<!-- PRODUCTION Web Payments SDK -->
+<!-- Web Payments SDK (PRODUCTION). For sandbox, use https://sandbox.web.squarecdn.com/v1/square.js -->
 <script src="https://web.squarecdn.com/v1/square.js"></script>
 <script>
   (async function () {
     const errBox = document.getElementById('err');
+
     try {
-      const payments = window.Square.payments("{{ square_app_id }}", "{{ square_location_id }}");
+      const appId = "{{ square_app_id }}";
+      const locationId = "{{ square_location_id }}";
+
+      // diagnostics (view in DevTools Console)
+      console.log("APP_ID:", appId);
+      console.log("LOCATION_ID:", locationId);
+
+      const payments = window.Square.payments(appId, locationId);
       const card = await payments.card();
       await card.attach('#card-container');
 
@@ -35,10 +43,10 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token })
         });
-        const j = await res.json();
 
+        const j = await res.json();
         if (res.ok && j.ok) {
-          window.location.href = j.view_url;  // go to your card view
+          window.location.href = j.view_url;
         } else {
           errBox.textContent = j.error || 'Payment failed.';
           document.getElementById('pay-btn').disabled = false;

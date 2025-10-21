@@ -4,15 +4,17 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import requests
 
-# ----- Square client setup -----
+# ===== Square config (use PRODUCTION by default) =====
 SQUARE_APP_ID = os.environ.get("SQUARE_APP_ID")
 SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN")
 SQUARE_LOCATION_ID = os.environ.get("SQUARE_LOCATION_ID")
 
-BASE_URL = "https://connect.squareup.com"  # production
+# If you switch to sandbox keys (prefix "sandbox-"), change BASE_URL accordingly:
+# BASE_URL = "https://connect.squareupsandbox.com"   # sandbox
+BASE_URL = "https://connect.squareup.com"            # production
 
 def square_create_payment(body: dict):
-    """Call Square Payments API via REST. Returns (ok, data_or_error)."""
+    """Call Square /v2/payments via REST. Returns (ok, data_or_error)."""
     url = f"{BASE_URL}/v2/payments"
     headers = {
         "Authorization": f"Bearer {SQUARE_ACCESS_TOKEN}",
@@ -27,7 +29,7 @@ def square_create_payment(body: dict):
     except Exception:
         return False, {"errors": [{"detail": r.text}]}
 
-# ---------- App setup ----------
+# ===== Flask app =====
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
@@ -40,10 +42,7 @@ DATA_DIR.mkdir(exist_ok=True)
 
 ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
-# ---------- Helpers ----------
-def rand_digits(n=4):
-    return ''.join(random.choices(string.digits, k=n))
-
+# ===== Helpers =====
 def rand_ticket(n=10):
     alphabet = string.ascii_uppercase + string.digits
     return ''.join(random.choices(alphabet, k=n))
@@ -73,7 +72,7 @@ def append_record(record):
     rows.append(record)
     DB_FILE.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
 
-# price map (cents)
+# ===== Price map (in cents) =====
 PACKAGE_PRICES = {
     "platinum": 200000,
     "premium": 150000,
@@ -83,13 +82,13 @@ PACKAGE_PRICES = {
     "regular":  50000,
 }
 
-# Serve uploads
+# ===== Static uploads =====
 @app.route("/uploads/<path:fname>")
 def serve_upload(fname):
     from flask import send_from_directory
     return send_from_directory(UPLOADS, fname)
 
-# ---------- Routes ----------
+# ===== Routes =====
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -167,13 +166,18 @@ def payment_options():
         return redirect(url_for("client"))
     return render_template("payment_options.html", order=order)
 
-# --- Square card checkout page (uses Web Payments SDK in your template)
+# ===== Card (Web Payments SDK + REST charge) =====
 @app.route("/payment/card", methods=["GET"])
 def payment_card():
     order = session.get("pending_order")
     if not order:
         return redirect(url_for("client"))
     price_cents = PACKAGE_PRICES.get(order["client"]["package"], 50000)
+
+    # Fail fast if env vars are missing
+    assert SQUARE_APP_ID, "SQUARE_APP_ID is empty"
+    assert SQUARE_LOCATION_ID, "SQUARE_LOCATION_ID is empty"
+
     return render_template(
         "payment_card.html",
         order=order,
@@ -182,7 +186,6 @@ def payment_card():
         square_location_id=SQUARE_LOCATION_ID
     )
 
-# --- Square Card charge API
 @app.route("/api/square/pay/card", methods=["POST"])
 def square_pay_card():
     order = session.get("pending_order")
@@ -206,7 +209,6 @@ def square_pay_card():
         "autocomplete": True,
     }
 
-    # ⬇️⬇️ THIS WHOLE BLOCK MUST BE INDENTED INSIDE THE FUNCTION ⬇️⬇️
     ok, resp = square_create_payment(body)
     if ok:
         payment_id = resp["payment"]["id"]
@@ -221,6 +223,38 @@ def square_pay_card():
     else:
         msg = (resp.get("errors") or [{}])[0].get("detail", "Payment error")
         return jsonify({"error": msg}), 400
+
+# ===== Bank (ACH via Web Payments SDK token) + manual upload fallback =====
+@app.route("/payment/bank", methods=["GET","POST"])
+def payment_bank():
+    order = session.get("pending_order")
+    if not order:
+        return redirect(url_for("client"))
+
+    # POST = manual upload fallback
+    if request.method == "POST":
+        proof = request.files.get("bank_proof")
+        proof_url = save_upload(proof)
+        order["paid"] = True
+        order["payment_info"] = {"method":"Bank Transfer","proof_url": proof_url}
+        order["created_at"] = datetime.utcnow().isoformat()
+        append_record(order)
+        session.pop("pending_order", None)
+        return render_template("card.html", order=order)
+
+    # GET = render ACH page
+    assert SQUARE_APP_ID, "SQUARE_APP_ID is empty"
+    assert SQUARE_LOCATION_ID, "SQUARE_LOCATION_ID is empty"
+    try:
+        return render_template(
+            "payment_bank.html",
+            order=order,
+            square_app_id=SQUARE_APP_ID,
+            square_location_id=SQUARE_LOCATION_ID
+        )
+    except Exception as e:
+        app.logger.exception("payment_bank GET failed")
+        return f"Template error: {e}", 500
 
 @app.route("/api/square/pay/bank", methods=["POST"])
 def square_pay_bank():
@@ -237,7 +271,7 @@ def square_pay_bank():
     idem = f"ach-{order['ticket_id']}-{int(datetime.utcnow().timestamp())}"
 
     body = {
-        "source_id": token,
+        "source_id": token,  # bank account token from Web Payments SDK
         "idempotency_key": idem,
         "amount_money": {"amount": amount_cents, "currency": "USD"},
         "location_id": SQUARE_LOCATION_ID,
@@ -257,28 +291,6 @@ def square_pay_bank():
     else:
         msg = (resp.get("errors") or [{}])[0].get("detail", "Payment error")
         return jsonify({"error": msg}), 400
-
-# --- Manual bank transfer page (file upload proof)
-@app.route("/payment/bank", methods=["GET","POST"])
-def payment_bank():
-    order = session.get("pending_order")
-    if not order:
-        return redirect(url_for("client"))
-    if request.method == "POST":
-        proof = request.files.get("bank_proof")
-        proof_url = save_upload(proof)
-        order["paid"] = True
-        order["payment_info"] = {"method":"Bank Transfer","proof_url": proof_url}
-        order["created_at"] = datetime.utcnow().isoformat()
-        append_record(order)
-        session.pop("pending_order", None)
-        return render_template("card.html", order=order)
-    return render_template(
-        "payment_bank.html",
-        order=order,
-        square_app_id=SQUARE_APP_ID,
-        square_location_id=SQUARE_LOCATION_ID
-    )
 
 @app.route("/payment/gift", methods=["GET","POST"])
 def payment_gift():

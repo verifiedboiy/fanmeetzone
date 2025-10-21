@@ -1,25 +1,48 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- ADD this block near the top of the card -->
-<h2>Bank Transfer</h2>
-<p>Pay directly from your bank with Square ACH. Funds usually clear in <strong>2–3 business days</strong>.</p>
+<section class="card">
+  <h2>Bank Transfer</h2>
+  <p>Pay directly from your bank with Square ACH. Funds usually clear in <strong>2–3 business days</strong>.</p>
 
-<div id="ach-form"></div>
-<button id="ach-button" class="btn" type="button">Pay from Bank (ACH)</button>
-<p id="ach-status" style="margin-top:10px;"></p>
+  <!-- ACH UI -->
+  <div id="ach-form"></div>
+  <button id="ach-button" class="btn" type="button">Pay from Bank (ACH)</button>
+  <p id="ach-status" style="margin-top:10px;"></p>
 
-<hr style="margin:24px 0; opacity:.2;">
+  <hr style="margin:24px 0; opacity:.2;">
 
-<!-- Square Web Payments SDK (PRODUCTION) -->
+  <!-- Fallback: manual receipt upload (posts back to /payment/bank) -->
+  <h3 style="margin-top:0;">Prefer a manual bank transfer?</h3>
+  <p>Send a bank transfer from your bank and upload a receipt or screenshot. We’ll review and mark as paid.</p>
+
+  <form action="{{ url_for('payment_bank') }}" method="POST" enctype="multipart/form-data">
+    <label>Upload proof of payment (screenshot/receipt)</label><br>
+    <input type="file" name="bank_proof" accept="image/*" capture="environment" required>
+    <button class="btn" type="submit" style="margin-top:10px;">Submit for Review</button>
+  </form>
+
+  <p style="margin-top:10px; font-size:.9rem; opacity:.7;">
+    Tip: ACH is fastest. Manual uploads are reviewed by our team.
+  </p>
+</section>
+
+<!-- Web Payments SDK (PRODUCTION). For sandbox, use the sandbox URL -->
 <script src="https://web.squarecdn.com/v1/square.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', initAch);
 
   async function initAch () {
     const status = document.getElementById('ach-status');
+
     try {
-      const payments = Square.payments("{{ square_app_id }}", "{{ square_location_id }}");
+      const appId = "{{ square_app_id }}";
+      const locationId = "{{ square_location_id }}";
+
+      console.log('APP_ID', appId);
+      console.log('LOCATION_ID', locationId);
+
+      const payments = Square.payments(appId, locationId);
       const ach = await payments.ach();
       await ach.attach('#ach-form');
 
@@ -31,11 +54,13 @@
             status.textContent = 'Could not verify bank account. Please try again or use manual upload.';
             return;
           }
+
           const res = await fetch("{{ url_for('square_pay_bank') }}", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token: result.token })
           });
+
           const data = await res.json();
           if (res.ok) {
             status.textContent = '✅ Bank payment created. Status: Pending settlement (2–3 business days).';
@@ -50,84 +75,7 @@
 
     } catch (e) {
       console.error('ACH init error', e);
-      status.textContent = 'ACH not available on this device/browser. Use manual upload below.';
-    }
-  }
-</script>
-
-<section class="card">
-  <h2>Bank Transfer</h2>
-  <p>Pay directly from your bank with Square ACH. Funds usually clear in <strong>2–3 business days</strong>.</p>
-
-  <!-- ACH payment UI -->
-  <div id="ach-form"></div>
-  <button id="ach-button" class="btn" type="button">Pay from Bank (ACH)</button>
-  <p id="ach-status" style="margin-top:10px;"></p>
-
-  <hr style="margin:24px 0; opacity:.2;">
-
-  <!-- Fallback: manual receipt upload -->
-  <h3 style="margin-top:0;">Prefer a manual transfer?</h3>
-  <p>Send a bank transfer / wire from your bank and upload a receipt or screenshot. We’ll review and mark as paid.</p>
-
-  <form action="{{ url_for('payment_bank_manual') }}" method="POST" enctype="multipart/form-data">
-    <label>Upload proof of payment (screenshot/receipt)</label>
-    <input type="file" name="bank_proof" accept="image/*" capture="environment" required>
-    <button class="btn" type="submit">Submit for Review</button>
-  </form>
-
-  <p style="margin-top:10px; font-size:.9rem; opacity:.7;">
-    Note: Manual transfers are reviewed by our team. For the fastest experience, use “Pay from Bank (ACH)” above.
-  </p>
-</section>
-
-<!-- Square Web Payments SDK (PRODUCTION) -->
-<script src="https://web.squarecdn.com/v1/square.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', initAch);
-
-  async function initAch () {
-    const status = document.getElementById('ach-status');
-    try {
-      // Create the Payments instance
-      const payments = Square.payments("{{ square_app_id }}", "{{ square_location_id }}");
-
-      // Create and attach the ACH component
-      const ach = await payments.ach();
-      await ach.attach('#ach-form');
-
-      // Handle click → tokenize → send to backend
-      document.getElementById('ach-button').addEventListener('click', async () => {
-        status.textContent = 'Connecting to your bank…';
-        try {
-          const result = await ach.tokenize();
-          if (result.status !== 'OK') {
-            status.textContent = 'Could not verify bank account. Please try again or use manual upload.';
-            return;
-          }
-
-          // Call backend to create payment
-          const res = await fetch("{{ url_for('square_pay_bank') }}", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token: result.token })
-          });
-
-          const data = await res.json();
-          if (res.ok) {
-            status.textContent = '✅ Bank payment created. Status: Pending settlement (2–3 business days).';
-          } else {
-            status.textContent = '❌ Bank payment failed: ' + (data.error || 'Unknown error');
-          }
-        } catch (err) {
-          console.error(err);
-          status.textContent = 'Unexpected error. Please try again or use manual upload.';
-        }
-      });
-
-    } catch (err) {
-      console.error('ACH init error', err);
-      status.textContent = 'ACH not available on this device/browser. Use manual upload below.';
+      status.textContent = 'ACH not available on this device/browser. Use manual upload above.';
     }
   }
 </script>
