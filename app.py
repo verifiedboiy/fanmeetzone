@@ -4,6 +4,11 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import requests
 
+square_client = Client(
+    access_token=SQUARE_ACCESS_TOKEN,
+    environment="production"
+)
+
 # ===== Square config (use PRODUCTION by default) =====
 SQUARE_APP_ID = os.environ.get("SQUARE_APP_ID")
 SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN")
