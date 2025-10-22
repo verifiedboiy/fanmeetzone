@@ -76,16 +76,18 @@
   <div id="card-container"></div>
 
   <!-- Terms & Conditions (UNDER card, ABOVE button) -->
-  <div class="tandc">
-    <label for="agreeTerms">
-      <input id="agreeTerms" type="checkbox">
-      <span style="color:#d0d6e1;">
-        I accept the
-        <a href="{{ url_for('terms') }}"></a>
-        and agree to the Refund &amp; Dispute Policy.
-      </span>
-    </label>
-  </div>
+<div class="tandc" style="background:#141f35;padding:12px;border-radius:8px;">
+  <label for="agreeTerms" style="display:flex;align-items:flex-start;gap:10px;line-height:1.45;justify-content:center;text-align:center;">
+    <input id="agreeTerms" type="checkbox" style="margin-top:3px;">
+    <span style="color:#d0d6e1;">
+      I accept the
+      <a href="{{ url_for('terms') }}" rel="noopener" style="color:#3ba9ff;text-decoration:none;">
+        Terms &amp; Conditions
+      </a>
+      and agree to the Refund &amp; Dispute Policy.
+    </span>
+  </label>
+</div>
 
   <!-- Pay button -->
   <button id="payBtn" class="btn" type="button" disabled>Pay Now</button>
