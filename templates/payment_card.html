@@ -75,13 +75,18 @@
   <!-- Card field (Square mounts here) -->
   <div id="card-container"></div>
 
-  <!-- Terms & Conditions (UNDER card, ABOVE button) -->
-<div class="tandc" style="background:#141f35;padding:12px;border-radius:8px;">
-  <label for="agreeTerms" style="display:flex;align-items:flex-start;gap:10px;line-height:1.45;justify-content:center;text-align:center;">
-    <input id="agreeTerms" type="checkbox" style="margin-top:3px;">
-    <span style="color:#d0d6e1;">
+  <!-- Terms & Conditions (UNDER card, ABOVE button — locked + centered) -->
+<div class="tandc"
+     style="display:block !important; width:100% !important; clear:both !important; float:none !important;
+            margin-top:12px; background:#141f35; padding:12px; border-radius:8px; text-align:center !important;">
+  <label for="agreeTerms"
+         style="display:flex !important; flex-wrap:wrap; align-items:flex-start; justify-content:center;
+                gap:10px; line-height:1.45; margin:0; float:none !important; width:100% !important;">
+    <input id="agreeTerms" type="checkbox" style="margin-top:3px; flex:0 0 auto;">
+    <span style="color:#d0d6e1; white-space:normal !important; display:inline;">
       I accept the
-      <a href="{{ url_for('terms') }}" rel="noopener" style="color:#3ba9ff;text-decoration:none;">
+      <a href="{{ url_for('terms') }}" rel="noopener"
+         style="color:#3ba9ff; text-decoration:none; display:inline; float:none !important;">
         Terms &amp; Conditions
       </a>
       and agree to the Refund &amp; Dispute Policy.
