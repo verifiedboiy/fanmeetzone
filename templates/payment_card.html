@@ -33,7 +33,7 @@
   .tandc a { text-decoration: none; }
 </style>
 
-<section class="card" id="payCardFix" style="max-width:420px;margin:auto;text-align:center;"></section>
+<section class="card" id="payFix" style="max-width:420px;margin:auto;text-align:center;"></section>
   <h2 class="pay-title">Card / Debit Payment</h2>
   <p class="pay-meta">Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
 
@@ -67,7 +67,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const card  = document.getElementById('card-container');
-  const terms = document.querySelector('.tandc');
+  const terms = document.querySelector('#payFix .tandc');
   const btn   = document.getElementById('payBtn');
   if (card && terms && btn && terms.nextElementSibling !== btn) {
     card.insertAdjacentElement('afterend', terms); // card → terms → button
@@ -132,6 +132,26 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 </script>
 {% endblock %}
+
+<style>
+  /* scope: only this page */
+  #payFix{
+    display:block !important;            /* kill grid/flex/columns */
+    grid-template-columns:none !important;
+    flex-direction:column !important;
+    -webkit-column-count:1 !important; column-count:1 !important;
+  }
+  #payFix > *{
+    display:block !important; width:100% !important; max-width:100% !important;
+    float:none !important; clear:both !important;
+  }
+  /* terms box + label must not float */
+  #payFix .tandc{ display:block !important; width:100% !important; margin-top:12px !important; }
+  #payFix .tandc label{ display:flex !important; align-items:flex-start; gap:10px; float:none !important; width:100% !important; }
+  #payFix .tandc a{ float:none !important; }
+  /* button full width under it */
+  #payBtn{ display:block !important; width:100% !important; margin-top:14px !important; }
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
