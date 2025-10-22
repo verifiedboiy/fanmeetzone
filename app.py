@@ -164,7 +164,12 @@ def payment_options():
     order = session.get("pending_order")
     if not order:
         return redirect(url_for("client"))
-    return render_template("payment_options.html", order=order)
+    price_cents = PACKAGE_PRICES.get(order["client"]["package"], 50000)
+    return render_template(
+        "payment_options.html",
+        order=order,
+        amount_usd=price_cents // 100   # <— give the template a clean integer amount
+    )
 
 # ===== Card (Web Payments SDK + REST charge) =====
 @app.route("/payment/card", methods=["GET"])

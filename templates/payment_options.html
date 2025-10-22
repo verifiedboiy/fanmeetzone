@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Choose a payment method</h2>
+  <p>Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
+
+  <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
+    <a class="btn" href="{{ url_for('payment_card') }}">💳 Pay by Card / Debit</a>
+    <a class="btn" href="{{ url_for('payment_bank') }}">🏦 Pay from Bank (ACH)</a>
+    <a class="btn" href="{{ url_for('payment_gift') }}">🎁 Pay with Gift Card</a>
+  </div>
+
+  <p style="opacity:.7; margin-top:12px;">
+    Your selections will open a secure page for that method.
+  </p>
+</section>
+{% endblock %}
