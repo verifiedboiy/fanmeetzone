@@ -132,8 +132,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 </script>
 {% endblock %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const card  = document.getElementById('card-container');
+  const terms = document.querySelector('.tandc');
+  const btn   = document.getElementById('payBtn');
+  if (card && terms && btn && terms.nextElementSibling !== btn) {
+    card.insertAdjacentElement('afterend', terms); // card → terms → button
+  }
+});
+</script>
+
 <style>
-  
   /* only this page */
   #payCardFix { display: grid !important; grid-template-columns: 1fr !important; gap: 12px; }
   #payCardFix > * { grid-column: 1 / -1 !important; }  /* every child full width */
