@@ -21,19 +21,5 @@
       <a href="{{ url_for('payment_gift') }}" class="btn outline">Pay with Gift Card</a>
     </div>
   </div>
-
-  <!-- Manual receipt upload stays as backup -->
-  <h3 style="margin-top:0;">Manual Bank Transfer Receipt</h3>
-  <p>Send a bank transfer/wire from your bank and upload a receipt or screenshot. We’ll review and mark it as paid.</p>
-
-  <form action="{{ url_for('payment_bank') }}" method="POST" enctype="multipart/form-data">
-    <label>Upload proof of payment (screenshot/receipt)</label>
-    <input type="file" name="bank_proof" accept="image/*" required>
-    <button class="btn" type="submit" style="margin-top:10px;">Submit for Review</button>
-  </form>
-
-  <p style="margin-top:10px; font-size:.9rem; opacity:.7;">
-    Tip: Card / Debit Card is the fastest way to complete your payment instantly.
-  </p>
 </section>
 {% endblock %}
