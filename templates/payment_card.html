@@ -33,7 +33,7 @@
   .tandc a { text-decoration: none; }
 </style>
 
-<section class="card pay-card">
+<section class="card" id="payCardFix" style="max-width:420px;margin:auto;text-align:center;"></section>
   <h2 class="pay-title">Card / Debit Payment</h2>
   <p class="pay-meta">Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
 
@@ -63,6 +63,17 @@
   <!-- Error display -->
   <div id="err" class="pay-err" style="color:#ff7b7b;min-height:1.2em;"></div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const card  = document.getElementById('card-container');
+  const terms = document.querySelector('.tandc');
+  const btn   = document.getElementById('payBtn');
+  if (card && terms && btn && terms.nextElementSibling !== btn) {
+    card.insertAdjacentElement('afterend', terms); // card → terms → button
+  }
+});
+</script>
 
 <!-- Square Web Payments SDK -->
 <script src="https://web.squarecdn.com/v1/square.js"></script>
@@ -121,3 +132,11 @@
   });
 </script>
 {% endblock %}
+<style>
+  
+  /* only this page */
+  #payCardFix { display: grid !important; grid-template-columns: 1fr !important; gap: 12px; }
+  #payCardFix > * { grid-column: 1 / -1 !important; }  /* every child full width */
+  #payCardFix .tandc { display:block; width:100%; clear:both; }
+  #payCardFix *, #payCardFix label, #payCardFix a { float:none !important; } /* kill stray floats */
+</style>
