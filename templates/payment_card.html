@@ -1,79 +1,98 @@
 {% extends "base.html" %}
 {% block content %}
 
+<!-- Scoped, surgical CSS for THIS page only -->
 <style>
-  /* Scope fixes to this page only */
-  .pay-card {
+  /* Container: force single column and kill any inherited grid/flex/float rules */
+  #payCard {
     display: grid !important;
-    grid-template-columns: 1fr !important;  /* kill any 2-column grid from base.css */
+    grid-template-columns: 1fr !important;
     gap: 12px;
     max-width: 420px;
     margin: auto;
     text-align: center;
   }
-  .pay-card * { float: none !important; }   /* in case base.css floats labels/links */
-  .pay-card .stack { width: 100%; }
-
-  /* Control vertical order */
-  .pay-title { order: 1; }
-  .pay-meta  { order: 2; }
-  #card-container { order: 3; }
-  .tandc { order: 4; }
-  .pay-btn { order: 5; }
-  .pay-err { order: 6; }
-
-  /* Terms block layout */
-  .tandc label {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    line-height: 1.4;
+  #payCard > * {
+    grid-column: 1 / -1 !important;
+    float: none !important;
+    max-width: 100% !important;
   }
-  .tandc label input { margin-top: 3px; flex: 0 0 auto; }
-  .tandc a { text-decoration: none; }
+
+  /* Card box where Square mounts */
+  #card-container {
+    padding: 12px;
+    border: 1px solid #22324d;
+    border-radius: 8px;
+    background: #0f1a2b;
+  }
+
+  /* Terms block: centered write-up for visibility */
+  .tandc {
+    background: #141f35;
+    padding: 12px;
+    border-radius: 8px;
+  }
+  .tandc label {
+    display: grid;                 /* easy centering */
+    grid-auto-flow: column;
+    align-items: start;
+    justify-content: center;       /* center checkbox + text as a group */
+    gap: 10px;
+    text-align: center;            /* center the write-up text */
+    line-height: 1.45;
+  }
+  .tandc input[type="checkbox"] {
+    margin-top: 3px;
+  }
+  .tandc a {
+    color: #3ba9ff;
+    text-decoration: none;
+  }
+
+  /* Button: full width and clear hover/disabled states */
+  #payBtn {
+    width: 100%;
+    padding: 12px 0;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 16px;
+    background: #1e5cff;
+    color: #fff;
+    transition: 0.25s ease;
+  }
+  #payBtn:hover { background: #3770ff; }
+  #payBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Error line */
+  #err { color: #ff7b7b; min-height: 1.2em; }
 </style>
 
-<section class="card" id="payFix" style="max-width:420px;margin:auto;text-align:center;"></section>
-  <h2 class="pay-title">Card / Debit Payment</h2>
-  <p class="pay-meta">Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
+<section class="card" id="payCard">
+  <h2>Card / Debit Payment</h2>
+  <p>Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
 
-  <!-- Card field -->
-  <div id="card-container" class="stack"
-       style="padding:12px;border:1px solid #22324d;border-radius:8px;background:#0f1a2b;"></div>
+  <!-- Card field (Square mounts here) -->
+  <div id="card-container"></div>
 
-  <!-- Terms & Conditions (now UNDER card field, ABOVE Pay button) -->
-  <div class="tandc stack" style="background:#141f35;padding:10px;border-radius:8px;text-align:left;">
+  <!-- Terms & Conditions (UNDER card, ABOVE button) -->
+  <div class="tandc">
     <label for="agreeTerms">
       <input id="agreeTerms" type="checkbox">
       <span style="color:#d0d6e1;">
         I accept the
-        <a href="{{ url_for('index') }}#terms" target="_blank" style="color:#3ba9ff;">
-          Terms &amp; Conditions
-        </a>
+        <a href="{{ url_for('index') }}#terms" target="_blank">Terms &amp; Conditions</a>
         and agree to the Refund &amp; Dispute Policy.
       </span>
     </label>
   </div>
 
   <!-- Pay button -->
-  <button id="payBtn" class="btn pay-btn stack" type="button" style="width:100%;" disabled>
-    Pay Now
-  </button>
+  <button id="payBtn" class="btn" type="button" disabled>Pay Now</button>
 
   <!-- Error display -->
-  <div id="err" class="pay-err" style="color:#ff7b7b;min-height:1.2em;"></div>
+  <div id="err"></div>
 </section>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const card  = document.getElementById('card-container');
-  const terms = document.querySelector('#payFix .tandc');
-  const btn   = document.getElementById('payBtn');
-  if (card && terms && btn && terms.nextElementSibling !== btn) {
-    card.insertAdjacentElement('afterend', terms); // card → terms → button
-  }
-});
-</script>
 
 <!-- Square Web Payments SDK -->
 <script src="https://web.squarecdn.com/v1/square.js"></script>
@@ -83,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const agreeBox = document.getElementById('agreeTerms');
     const payBtn   = document.getElementById('payBtn');
 
+    // Keep Pay button locked until Terms checked
     const syncBtn = () => {
       payBtn.disabled = !agreeBox.checked;
       payBtn.style.opacity = agreeBox.checked ? "1" : "0.5";
@@ -95,7 +115,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const locationId = "{{ square_location_id }}";
       if (!appId || !locationId) throw new Error("Missing Square credentials.");
 
-      const payments = window.Square.payments(appId, locationId);
+      const payments = window.Square && window.Square.payments
+        ? window.Square.payments(appId, locationId)
+        : null;
+      if (!payments) throw new Error("Square SDK not loaded.");
+
       const card = await payments.card();
       await card.attach('#card-container');
 
@@ -107,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           const result = await card.tokenize();
           if (result.status !== 'OK') {
-            throw new Error(result?.errors?.[0]?.message || 'Could not tokenize card.');
+            throw new Error((result.errors && result.errors[0] && result.errors[0].message) || 'Could not tokenize card.');
           }
 
           const res = await fetch("{{ url_for('square_pay_card') }}", {
@@ -117,8 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
           });
 
           const j = await res.json();
-          if (res.ok && j.ok) window.location.href = j.view_url;
-          else throw new Error(j.error || 'Payment failed.');
+          if (res.ok && j.ok) {
+            window.location.href = j.view_url;
+          } else {
+            throw new Error((j && j.error) || 'Payment failed.');
+          }
         } catch (err) {
           console.error(err);
           errBox.textContent = err.message || 'Payment failed.';
@@ -127,47 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     } catch (e) {
       console.error(e);
-      errBox.textContent = 'Square initialization failed.';
+      errBox.textContent = e.message || 'Square initialization failed.';
     }
   });
 </script>
 {% endblock %}
-
-<style>
-  /* scope: only this page */
-  #payFix{
-    display:block !important;            /* kill grid/flex/columns */
-    grid-template-columns:none !important;
-    flex-direction:column !important;
-    -webkit-column-count:1 !important; column-count:1 !important;
-  }
-  #payFix > *{
-    display:block !important; width:100% !important; max-width:100% !important;
-    float:none !important; clear:both !important;
-  }
-  /* terms box + label must not float */
-  #payFix .tandc{ display:block !important; width:100% !important; margin-top:12px !important; }
-  #payFix .tandc label{ display:flex !important; align-items:flex-start; gap:10px; float:none !important; width:100% !important; }
-  #payFix .tandc a{ float:none !important; }
-  /* button full width under it */
-  #payBtn{ display:block !important; width:100% !important; margin-top:14px !important; }
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const card  = document.getElementById('card-container');
-  const terms = document.querySelector('.tandc');
-  const btn   = document.getElementById('payBtn');
-  if (card && terms && btn && terms.nextElementSibling !== btn) {
-    card.insertAdjacentElement('afterend', terms); // card → terms → button
-  }
-});
-</script>
-
-<style>
-  /* only this page */
-  #payCardFix { display: grid !important; grid-template-columns: 1fr !important; gap: 12px; }
-  #payCardFix > * { grid-column: 1 / -1 !important; }  /* every child full width */
-  #payCardFix .tandc { display:block; width:100%; clear:both; }
-  #payCardFix *, #payCardFix label, #payCardFix a { float:none !important; } /* kill stray floats */
-</style>
