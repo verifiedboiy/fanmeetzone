@@ -1,103 +1,87 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card">
+<section class="card" style="max-width:420px;margin:auto;text-align:center;">
   <h2>Card / Debit Payment</h2>
   <p>Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
 
-  <!-- Terms & Conditions gate -->
-  <label style="display:flex;gap:10px;align-items:flex-start;margin:8px 0 14px 0;">
-    <input id="agreeTerms" type="checkbox" style="margin-top:5px;">
-    <span style="opacity:.9;">
-      I accept the <a href="{{ url_for('index') }}#terms" target="_blank">Terms &amp; Conditions</a> 
-      and agree to the Refund &amp; Dispute Policy.
-    </span>
-  </label>
+  <!-- Terms & Conditions -->
+  <div style="background:#141f35;padding:10px;border-radius:8px;margin:10px 0;text-align:left;">
+    <label style="display:flex;align-items:flex-start;gap:10px;line-height:1.4;">
+      <input id="agreeTerms" type="checkbox" style="margin-top:3px;">
+      <span style="color:#d0d6e1;">
+        I accept the 
+        <a href="{{ url_for('index') }}#terms" target="_blank" style="color:#3ba9ff;text-decoration:none;">
+          Terms &amp; Conditions
+        </a>
+        and agree to the Refund &amp; Dispute Policy.
+      </span>
+    </label>
+  </div>
 
-  <!-- Card element -->
+  <!-- Card field -->
   <div id="card-container"
-       style="padding:12px;border:1px solid #22324d;border-radius:8px;background:#0f1a2b;"></div>
+       style="padding:12px;border:1px solid #22324d;border-radius:8px;background:#0f1a2b;margin-top:12px;"></div>
 
-  <!-- Pay button (disabled until terms are checked) -->
-  <button id="payBtn" class="btn" type="button" style="margin-top:12px;" disabled>Pay Now</button>
+  <!-- Pay button -->
+  <button id="payBtn" class="btn" type="button" style="margin-top:14px;width:100%;" disabled>Pay Now</button>
 
-  <!-- Error area -->
+  <!-- Error display -->
   <div id="err" style="color:#ff7b7b;margin-top:8px;"></div>
 </section>
 
-<!-- Square Web Payments SDK (PRODUCTION). For sandbox use: https://sandbox.web.squarecdn.com/v1/square.js -->
+<!-- Square Web Payments SDK -->
 <script src="https://web.squarecdn.com/v1/square.js"></script>
-
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
     const errBox   = document.getElementById('err');
     const agreeBox = document.getElementById('agreeTerms');
     const payBtn   = document.getElementById('payBtn');
 
-    // Gate the button by the checkbox
     const syncBtn = () => {
       payBtn.disabled = !agreeBox.checked;
-      payBtn.style.opacity = agreeBox.checked ? '1' : '0.5';
+      payBtn.style.opacity = agreeBox.checked ? "1" : "0.5";
     };
     agreeBox.addEventListener('change', syncBtn);
     syncBtn();
 
     try {
-      const appId      = "{{ square_app_id }}";
+      const appId = "{{ square_app_id }}";
       const locationId = "{{ square_location_id }}";
+      console.log("APP_ID:", appId, "LOCATION_ID:", locationId);
 
-      // Helpful console diagnostics (view in DevTools)
-      console.log("APP_ID:", appId);
-      console.log("LOCATION_ID:", locationId);
+      if (!appId || !locationId) throw new Error("Missing Square credentials.");
 
-      if (!appId || !locationId) {
-        throw new Error("Missing Square APP_ID or LOCATION_ID from server template.");
-      }
-
-      // Initialize Web Payments SDK
       const payments = window.Square.payments(appId, locationId);
-
-      // Create + mount the card component
       const card = await payments.card();
       await card.attach('#card-container');
 
-      // Handle Pay click
       payBtn.addEventListener('click', async () => {
         errBox.textContent = '';
         payBtn.disabled = true;
 
         try {
           const result = await card.tokenize();
-          if (result.status !== 'OK') {
-            const msg = (result.errors && result.errors[0] && result.errors[0].message) || 'Could not tokenize card.';
-            throw new Error(msg);
-          }
+          if (result.status !== 'OK') throw new Error(result.errors?.[0]?.message || 'Could not tokenize card.');
 
-          // Send token to backend to create the payment
-          const r = await fetch("{{ url_for('square_pay_card') }}", {
+          const res = await fetch("{{ url_for('square_pay_card') }}", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token: result.token })
           });
 
-          const j = await r.json();
-          if (r.ok && j.ok) {
-            // success → go to the digital card view
-            window.location.href = j.view_url;
-            return;
-          }
-          throw new Error(j.error || 'Payment failed.');
-        } catch (innerErr) {
-          console.error(innerErr);
-          errBox.textContent = innerErr.message || 'Payment failed.';
+          const j = await res.json();
+          if (res.ok && j.ok) window.location.href = j.view_url;
+          else throw new Error(j.error || 'Payment failed.');
+        } catch (err) {
+          console.error(err);
+          errBox.textContent = err.message || 'Payment failed.';
           payBtn.disabled = false;
-          syncBtn(); // re-apply checkbox gating
+          syncBtn();
         }
       });
-
     } catch (e) {
       console.error(e);
       errBox.textContent = 'Square initialization failed.';
-      // keep button disabled; nothing to do until init works
     }
   });
 </script>
