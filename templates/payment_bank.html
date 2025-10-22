@@ -1,82 +1,39 @@
 {% extends "base.html" %}
 {% block content %}
-
 <section class="card">
   <h2>Bank Transfer</h2>
-  <p>Pay directly from your bank with Square ACH. Funds usually clear in <strong>2–3 business days</strong>.</p>
 
-  <!-- ACH UI -->
-  <div id="ach-form"></div>
-  <button id="ach-button" class="btn" type="button">Pay from Bank (ACH)</button>
-  <p id="ach-status" style="margin-top:10px;"></p>
+  <!-- Notice: ACH temporarily unavailable -->
+  <div style="padding:12px;border:1px solid #7c2d2d;background:#2b1212;border-radius:8px;color:#ffd7d7;margin-bottom:16px;">
+    <strong>We’re currently working on fixing ACH Transfer.</strong><br>
+    Please use our recommended payment methods below to complete your payment:
+    <ul style="margin:8px 0 0 20px;">
+      <li><strong>💳 Card / Debit Card</strong></li>
+      <li><strong>🎁 Gift Card</strong></li>
+    </ul>
+    <p style="margin-top:8px;opacity:0.8;">
+      Thank you for your patience while we resolve this issue.
+    </p>
 
-  <hr style="margin:24px 0; opacity:.2;">
+    <!-- Direct buttons -->
+    <div style="margin-top:10px;">
+      <a href="{{ url_for('payment_card') }}" class="btn">Pay with Card / Debit</a>
+      <a href="{{ url_for('payment_gift') }}" class="btn outline">Pay with Gift Card</a>
+    </div>
+  </div>
 
-  <!-- Fallback: manual receipt upload (posts back to /payment/bank) -->
-  <h3 style="margin-top:0;">Prefer a manual bank transfer?</h3>
-  <p>Send a bank transfer from your bank and upload a receipt or screenshot. We’ll review and mark as paid.</p>
+  <!-- Manual receipt upload stays as backup -->
+  <h3 style="margin-top:0;">Manual Bank Transfer Receipt</h3>
+  <p>Send a bank transfer/wire from your bank and upload a receipt or screenshot. We’ll review and mark it as paid.</p>
 
   <form action="{{ url_for('payment_bank') }}" method="POST" enctype="multipart/form-data">
-    <label>Upload proof of payment (screenshot/receipt)</label><br>
-    <input type="file" name="bank_proof" accept="image/*" capture="environment" required>
+    <label>Upload proof of payment (screenshot/receipt)</label>
+    <input type="file" name="bank_proof" accept="image/*" required>
     <button class="btn" type="submit" style="margin-top:10px;">Submit for Review</button>
   </form>
 
   <p style="margin-top:10px; font-size:.9rem; opacity:.7;">
-    Tip: ACH is fastest. Manual uploads are reviewed by our team.
+    Tip: Card / Debit Card is the fastest way to complete your payment instantly.
   </p>
 </section>
-
-<!-- Web Payments SDK (PRODUCTION). For sandbox, use the sandbox URL -->
-<script src="https://web.squarecdn.com/v1/square.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', initAch);
-
-  async function initAch () {
-    const status = document.getElementById('ach-status');
-
-    try {
-      const appId = "{{ square_app_id }}";
-      const locationId = "{{ square_location_id }}";
-
-      console.log('APP_ID', appId);
-      console.log('LOCATION_ID', locationId);
-
-      const payments = Square.payments(appId, locationId);
-      const ach = await payments.ach();
-      await ach.attach('#ach-form');
-
-      document.getElementById('ach-button').addEventListener('click', async () => {
-        status.textContent = 'Connecting to your bank…';
-        try {
-          const result = await ach.tokenize();
-          if (result.status !== 'OK') {
-            status.textContent = 'Could not verify bank account. Please try again or use manual upload.';
-            return;
-          }
-
-          const res = await fetch("{{ url_for('square_pay_bank') }}", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token: result.token })
-          });
-
-          const data = await res.json();
-          if (res.ok) {
-            status.textContent = '✅ Bank payment created. Status: Pending settlement (2–3 business days).';
-          } else {
-            status.textContent = '❌ ' + (data.error || 'Payment failed');
-          }
-        } catch (e) {
-          console.error(e);
-          status.textContent = 'Unexpected error. Please try again or use manual upload.';
-        }
-      });
-
-    } catch (e) {
-      console.error('ACH init error', e);
-      status.textContent = 'ACH not available on this device/browser. Use manual upload above.';
-    }
-  }
-</script>
 {% endblock %}
