@@ -341,11 +341,15 @@ def view_card(ticket_id):
             return render_template("card.html", order=r)
     return "Card not found", 404
     @app.route('/.well-known/apple-developer-merchantid-domain-association')
-
+    
 @app.route('/.well-known/apple-developer-merchantid-domain-association')
 def apple_pay_verification():
-    from flask import send_from_directory
-    return send_from_directory('static/.well-known', 'apple-developer-merchantid-domain-association')
-    
+    folder = os.path.join(current_app.root_path, 'static', '.well-known')
+    return send_from_directory(
+        folder,
+        'apple-developer-merchantid-domain-association',
+        mimetype='text/plain'
+    )
+
 if __name__ == "__main__":
     app.run(debug=True)
