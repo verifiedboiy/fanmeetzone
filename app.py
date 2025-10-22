@@ -3,16 +3,17 @@ from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import requests
-
-square_client = Client(
-    access_token=SQUARE_ACCESS_TOKEN,
-    environment="production"
-)
+from square.client import Client
 
 # ===== Square config (use PRODUCTION by default) =====
 SQUARE_APP_ID = os.environ.get("SQUARE_APP_ID")
 SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN")
 SQUARE_LOCATION_ID = os.environ.get("SQUARE_LOCATION_ID")
+
+square_client = Client(
+    access_token=SQUARE_ACCESS_TOKEN,
+    environment="production"
+)
 
 # If you switch to sandbox keys (prefix "sandbox-"), change BASE_URL accordingly:
 # BASE_URL = "https://connect.squareupsandbox.com"   # sandbox
