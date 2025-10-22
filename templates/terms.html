@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<section style="max-width:720px;margin:auto;padding:30px;color:#d0d6e1;line-height:1.6;">
+  <h2 style="text-align:center;">Terms & Conditions</h2>
+  <p>Welcome to <strong>FanMeetZone</strong>. These Terms & Conditions outline the rules and policies
+     governing all payments and activities on our platform. By continuing to payment, you agree to
+     these terms in full.</p>
+
+  <h3>1. Payments & Processing</h3>
+  <p>All payments made through FanMeetZone are securely processed. Once confirmed, transactions are
+     immediately submitted for settlement and cannot be modified. Ensure all information, including
+     package type and contact details, are correct before confirming.</p>
+
+  <h3>2. No Refunds Policy</h3>
+  <p>Due to the digital and personalized nature of our services (including meet-and-greets,
+     video calls, or personalized content), all sales are <strong>final and non-refundable</strong>.
+     Refunds will only be issued if a duplicate charge occurs due to a verified system error.</p>
+
+  <h3>3. Cancellations & Rescheduling</h3>
+  <p>FanMeetZone reserves the right to reschedule any event or interaction due to technical issues
+     or changes from the participating celebrity. In such cases, the booking will be moved to the
+     next available date, but no refunds will be provided.</p>
+
+  <h3>4. User Responsibility</h3>
+  <p>Users must provide accurate personal details. FanMeetZone is not responsible for losses arising
+     from incorrect email addresses, payment details, or incomplete forms.</p>
+
+  <h3>5. Fraud & Verification</h3>
+  <p>To protect both clients and celebrities, FanMeetZone may require additional verification before
+     completing transactions. Failure to comply may result in the cancellation of the booking without
+     refund.</p>
+
+  <h3>6. Liability Disclaimer</h3>
+  <p>FanMeetZone provides its services “as-is.” We are not responsible for technical interruptions,
+     third-party delays, or the inability to complete a meet-and-greet due to factors beyond our control.</p>
+
+  <h3>7. Dispute Resolution</h3>
+  <p>All disputes must be submitted to <strong>support@fanmeetzone.com</strong> within 48 hours of the issue.
+     Disputes submitted after this window may not be reviewed.</p>
+
+  <h3>8. Updates to These Terms</h3>
+  <p>These terms may be updated periodically. The latest version will always be available on this page.
+     Continued use of the platform means acceptance of any changes.</p>
+
+  <p style="text-align:center;margin-top:25px;font-style:italic;">Last updated: October 2025</p>
+
+  <div style="text-align:center;margin-top:35px;">
+    <a href="{{ url_for('payment_card') }}" 
+       style="display:inline-block;background:#1e5cff;color:#fff;padding:12px 24px;
+              border-radius:6px;text-decoration:none;font-weight:600;">
+      Continue to Payment
+    </a>
+  </div>
+</section>
+{% endblock %}

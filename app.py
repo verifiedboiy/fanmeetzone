@@ -359,5 +359,9 @@ def apple_pay_verification():
     # Use Flask's static file server; path is relative to the /static folder
     return app.send_static_file('.well-known/apple-developer-merchantid-domain-association')
 
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+    
 if __name__ == "__main__":
     app.run(debug=True)
