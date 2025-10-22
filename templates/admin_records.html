@@ -55,6 +55,10 @@
             <form action="{{ url_for('admin_verify', ticket=r.ticket_id, action='reject') }}" method="POST">
               <button class="btn" type="submit">Reject</button>
             </form>
+
+            <form action="{{ url_for('admin_delete', ticket=r.ticket_id) }}" method="POST" onsubmit="return confirm('Delete this record permanently?');">
+              <button class="btn danger" type="submit" style="background:#6e1a1a;">Delete</button>
+            </form>
           </div>
         </div>
       {% endfor %}

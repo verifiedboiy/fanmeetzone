@@ -338,6 +338,13 @@ def admin_verify(ticket, action):
     save_records(records)
     return redirect(url_for('admin_records'))
 
+@app.route('/admin/delete/<ticket>', methods=['POST'])
+def admin_delete(ticket):
+    records = load_records()
+    new_records = [r for r in records if r.get('ticket_id') != ticket]
+    save_records(new_records)
+    return redirect(url_for('admin_records'))
+
 @app.route("/card/<ticket_id>")
 def view_card(ticket_id):
     records = load_records()
