@@ -1,23 +1,53 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card"
-         style="max-width:420px;margin:auto;text-align:center;display:block !important;">
-  <h2>Card / Debit Payment</h2>
-  <p>Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
 
-  <!-- Card field (Square mounts here) -->
-  <div id="card-container"
-       style="padding:12px;border:1px solid #22324d;border-radius:8px;background:#0f1a2b;margin-top:12px;width:100%;"></div>
+<style>
+  /* Scope fixes to this page only */
+  .pay-card {
+    display: grid !important;
+    grid-template-columns: 1fr !important;  /* kill any 2-column grid from base.css */
+    gap: 12px;
+    max-width: 420px;
+    margin: auto;
+    text-align: center;
+  }
+  .pay-card * { float: none !important; }   /* in case base.css floats labels/links */
+  .pay-card .stack { width: 100%; }
 
-  <!-- Terms & Conditions (now UNDER card details and ABOVE Pay button) -->
-  <div style="background:#141f35;padding:10px;border-radius:8px;margin-top:12px;text-align:left;clear:both;">
-    <label for="agreeTerms"
-           style="display:flex;align-items:flex-start;gap:10px;line-height:1.4;width:100%;">
-      <input id="agreeTerms" type="checkbox" style="margin-top:3px;flex:0 0 auto;">
-      <span style="color:#d0d6e1;display:block;">
+  /* Control vertical order */
+  .pay-title { order: 1; }
+  .pay-meta  { order: 2; }
+  #card-container { order: 3; }
+  .tandc { order: 4; }
+  .pay-btn { order: 5; }
+  .pay-err { order: 6; }
+
+  /* Terms block layout */
+  .tandc label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.4;
+  }
+  .tandc label input { margin-top: 3px; flex: 0 0 auto; }
+  .tandc a { text-decoration: none; }
+</style>
+
+<section class="card pay-card">
+  <h2 class="pay-title">Card / Debit Payment</h2>
+  <p class="pay-meta">Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
+
+  <!-- Card field -->
+  <div id="card-container" class="stack"
+       style="padding:12px;border:1px solid #22324d;border-radius:8px;background:#0f1a2b;"></div>
+
+  <!-- Terms & Conditions (now UNDER card field, ABOVE Pay button) -->
+  <div class="tandc stack" style="background:#141f35;padding:10px;border-radius:8px;text-align:left;">
+    <label for="agreeTerms">
+      <input id="agreeTerms" type="checkbox">
+      <span style="color:#d0d6e1;">
         I accept the
-        <a href="{{ url_for('index') }}#terms" target="_blank"
-           style="color:#3ba9ff;text-decoration:none;">
+        <a href="{{ url_for('index') }}#terms" target="_blank" style="color:#3ba9ff;">
           Terms &amp; Conditions
         </a>
         and agree to the Refund &amp; Dispute Policy.
@@ -26,13 +56,12 @@
   </div>
 
   <!-- Pay button -->
-  <button id="payBtn" class="btn" type="button"
-          style="margin-top:14px;width:100%;" disabled>
+  <button id="payBtn" class="btn pay-btn stack" type="button" style="width:100%;" disabled>
     Pay Now
   </button>
 
   <!-- Error display -->
-  <div id="err" style="color:#ff7b7b;margin-top:8px;min-height:1.2em;"></div>
+  <div id="err" class="pay-err" style="color:#ff7b7b;min-height:1.2em;"></div>
 </section>
 
 <!-- Square Web Payments SDK -->
@@ -43,7 +72,6 @@
     const agreeBox = document.getElementById('agreeTerms');
     const payBtn   = document.getElementById('payBtn');
 
-    // Keep Pay button locked until Terms checked
     const syncBtn = () => {
       payBtn.disabled = !agreeBox.checked;
       payBtn.style.opacity = agreeBox.checked ? "1" : "0.5";
@@ -68,9 +96,7 @@
         try {
           const result = await card.tokenize();
           if (result.status !== 'OK') {
-            throw new Error(result.errors && result.errors[0] && result.errors[0].message
-                            ? result.errors[0].message
-                            : 'Could not tokenize card.');
+            throw new Error(result?.errors?.[0]?.message || 'Could not tokenize card.');
           }
 
           const res = await fetch("{{ url_for('square_pay_card') }}", {
@@ -80,11 +106,8 @@
           });
 
           const j = await res.json();
-          if (res.ok && j.ok) {
-            window.location.href = j.view_url;
-          } else {
-            throw new Error(j.error || 'Payment failed.');
-          }
+          if (res.ok && j.ok) window.location.href = j.view_url;
+          else throw new Error(j.error || 'Payment failed.');
         } catch (err) {
           console.error(err);
           errBox.textContent = err.message || 'Payment failed.';
