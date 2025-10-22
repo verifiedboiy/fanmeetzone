@@ -1,36 +1,64 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Admin — Payments</h2>
-<table class="table">
-  <thead><tr>
-    <th>Created</th><th>Ticket</th><th>Method</th><th>Status</th><th>Proof</th><th>Actions</th>
-  </tr></thead>
-  <tbody>
-  {% for r in records %}
-    <tr>
-      <td>{{ r.created_at or '' }}</td>
-      <td>{{ r.ticket_id }}</td>
-      <td>{{ r.payment_info.method if r.payment_info else '' }}</td>
-      <td>{{ r.status or ('paid' if r.paid else 'pending') }}</td>
-      <td>
-        {% if r.payment_info and r.payment_info.proof_url %}
-          <a href="{{ r.payment_info.proof_url }}" target="_blank">View</a>
-        {% endif %}
-      </td>
-      <td>
-        {% if (r.status or '') == 'pending_verification' %}
-          <form style="display:inline" method="post" action="{{ url_for('admin_verify', ticket=r.ticket_id, action='approve') }}">
-            <button class="btn">Approve</button>
-          </form>
-          <form style="display:inline" method="post" action="{{ url_for('admin_verify', ticket=r.ticket_id, action='reject') }}">
-            <button class="btn danger">Reject</button>
-          </form>
-        {% else %} — {% endif %}
-        
-        <a class="btn small" href="{{ url_for('view_card', ticket_id=r.ticket_id) }}" target="_blank">View Card</a>
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+<section class="card">
+  <h2>Admin • Records</h2>
+  {% if records|length == 0 %}
+    <p>No records yet.</p>
+  {% else %}
+    <div style="display:grid; gap:12px;">
+      {% for r in records %}
+        <div style="border:1px solid #2a3b57; border-radius:8px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div>
+              <div style="opacity:.8;">Ticket</div>
+              <code>{{ r.ticket_id }}</code>
+            </div>
+            <div>
+              <div style="opacity:.8;">Client</div>
+              {{ r.client.full_name or '—' }} <span style="opacity:.7;">({{ r.client.email or '—' }})</span>
+            </div>
+            <div>
+              <div style="opacity:.8;">Package</div>
+              {{ r.client.package|title }}
+            </div>
+            <div>
+              <div style="opacity:.8;">Status</div>
+              <strong>{{ r.status or (r.paid and 'verified' or 'pending') }}</strong>
+            </div>
+            <div>
+              <div style="opacity:.8;">Created</div>
+              {{ r.created_at or '—' }}
+            </div>
+          </div>
+
+          {% if r.payment_info %}
+            <div style="margin-top:8px; font-size:.95rem;">
+              <div style="opacity:.8;">Payment</div>
+              <div>
+                {{ r.payment_info.method }}
+                {% if r.payment_info.payment_id %} • <span style="opacity:.8;">{{ r.payment_info.payment_id }}</span>{% endif %}
+                {% if r.payment_info.session_id %} • <span style="opacity:.8;">{{ r.payment_info.session_id }}</span>{% endif %}
+                {% if r.payment_info.proof_url %}
+                  • <a href="{{ r.payment_info.proof_url }}" target="_blank">View proof</a>
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
+
+          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+            <a class="btn outline" href="{{ url_for('view_card', ticket_id=r.ticket_id) }}" target="_blank">Open Card</a>
+
+            <form action="{{ url_for('admin_verify', ticket=r.ticket_id, action='approve') }}" method="POST">
+              <button class="btn" type="submit">Approve</button>
+            </form>
+
+            <form action="{{ url_for('admin_verify', ticket=r.ticket_id, action='reject') }}" method="POST">
+              <button class="btn" type="submit">Reject</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
 {% endblock %}
