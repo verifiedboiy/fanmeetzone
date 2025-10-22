@@ -4,8 +4,18 @@
   <h2>Card / Debit Payment</h2>
   <p>Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
 
+<script>
+  const agreeBox = document.getElementById("agreeTerms");
+  const payBtn = document.getElementById("payBtn");
+
+  agreeBox.addEventListener("change", () => {
+    payBtn.disabled = !agreeBox.checked;
+    payBtn.style.opacity = agreeBox.checked ? "1" : "0.5";
+  });
+</script>
+
   <div id="card-container" style="padding:12px;border:1px solid #22324d;border-radius:8px;background:#0f1a2b;"></div>
-  <button id="pay-btn" class="btn" type="button" style="margin-top:12px;">Pay Now</button>
+  <button id="payBtn" class="btn" style="margin-top:10px;" disabled>Pay Now</button>
   <div id="err" style="color:#ff7b7b;margin-top:8px;"></div>
 </section>
 
