@@ -340,16 +340,12 @@ def view_card(ticket_id):
         if r.get("ticket_id") == ticket_id:
             return render_template("card.html", order=r)
     return "Card not found", 404
-    @app.route('/.well-known/apple-developer-merchantid-domain-association')
-    
+
+# --- Apple Pay domain verification (serves the file in static/.well-known) ---
 @app.route('/.well-known/apple-developer-merchantid-domain-association')
 def apple_pay_verification():
-    folder = os.path.join(current_app.root_path, 'static', '.well-known')
-    return send_from_directory(
-        folder,
-        'apple-developer-merchantid-domain-association',
-        mimetype='text/plain'
-    )
+    # Use Flask's static file server; path is relative to the /static folder
+    return app.send_static_file('.well-known/apple-developer-merchantid-domain-association')
 
 if __name__ == "__main__":
     app.run(debug=True)
