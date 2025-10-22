@@ -1,88 +1,23 @@
-{% extends "base.html" %}
-{% block content %}
-<section class="card" style="max-width:420px;margin:auto;text-align:center;">
-  <h2>Card / Debit Payment</h2>
-  <p>Amount: ${{ amount_usd }} • Ticket: <code>{{ order.ticket_id }}</code></p>
-
-  <!-- Terms & Conditions -->
-  <div style="background:#141f35;padding:10px;border-radius:8px;margin:10px 0;text-align:left;">
-    <label style="display:flex;align-items:flex-start;gap:10px;line-height:1.4;">
-      <input id="agreeTerms" type="checkbox" style="margin-top:3px;">
-      <span style="color:#d0d6e1;">
-        I accept the 
-        <a href="{{ url_for('index') }}#terms" target="_blank" style="color:#3ba9ff;text-decoration:none;">
-          Terms &amp; Conditions
-        </a>
-        and agree to the Refund &amp; Dispute Policy.
-      </span>
-    </label>
-  </div>
-
-  <!-- Card field -->
-  <div id="card-container"
-       style="padding:12px;border:1px solid #22324d;border-radius:8px;background:#0f1a2b;margin-top:12px;"></div>
-
-  <!-- Pay button -->
-  <button id="payBtn" class="btn" type="button" style="margin-top:14px;width:100%;" disabled>Pay Now</button>
-
-  <!-- Error display -->
-  <div id="err" style="color:#ff7b7b;margin-top:8px;"></div>
-</section>
-
-<!-- Square Web Payments SDK -->
-<script src="https://web.squarecdn.com/v1/square.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', async () => {
-    const errBox   = document.getElementById('err');
-    const agreeBox = document.getElementById('agreeTerms');
-    const payBtn   = document.getElementById('payBtn');
-
-    const syncBtn = () => {
-      payBtn.disabled = !agreeBox.checked;
-      payBtn.style.opacity = agreeBox.checked ? "1" : "0.5";
-    };
-    agreeBox.addEventListener('change', syncBtn);
-    syncBtn();
-
-    try {
-      const appId = "{{ square_app_id }}";
-      const locationId = "{{ square_location_id }}";
-      console.log("APP_ID:", appId, "LOCATION_ID:", locationId);
-
-      if (!appId || !locationId) throw new Error("Missing Square credentials.");
-
-      const payments = window.Square.payments(appId, locationId);
-      const card = await payments.card();
-      await card.attach('#card-container');
-
-      payBtn.addEventListener('click', async () => {
-        errBox.textContent = '';
-        payBtn.disabled = true;
-
-        try {
-          const result = await card.tokenize();
-          if (result.status !== 'OK') throw new Error(result.errors?.[0]?.message || 'Could not tokenize card.');
-
-          const res = await fetch("{{ url_for('square_pay_card') }}", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token: result.token })
-          });
-
-          const j = await res.json();
-          if (res.ok && j.ok) window.location.href = j.view_url;
-          else throw new Error(j.error || 'Payment failed.');
-        } catch (err) {
-          console.error(err);
-          errBox.textContent = err.message || 'Payment failed.';
-          payBtn.disabled = false;
-          syncBtn();
-        }
-      });
-    } catch (e) {
-      console.error(e);
-      errBox.textContent = 'Square initialization failed.';
-    }
-  });
-</script>
-{% endblock %}
+<!-- Terms & Conditions (mobile-friendly) -->
+<div style="
+  background:#141f35;
+  padding:12px;
+  border-radius:8px;
+  margin:10px 0;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  text-align:left;
+  flex-wrap:wrap;
+  max-width:100%;
+  box-sizing:border-box;">
+  <input id="agreeTerms" type="checkbox"
+         style="margin-top:4px;flex-shrink:0;transform:scale(1.2);" />
+  <span style="color:#d0d6e1;font-size:0.95rem;line-height:1.4;">
+    I accept the
+    <a href="{{ url_for('index') }}#terms"
+       target="_blank"
+       style="color:#3ba9ff;text-decoration:none;">Terms &amp; Conditions</a>
+    and agree to the Refund &amp; Dispute Policy.
+  </span>
+</div>
