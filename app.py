@@ -81,6 +81,79 @@ PACKAGE_PRICES = {
     "bronze":   70000,
     "regular":  50000,
 }
+PACKAGE_PERKS = {
+    "platinum": {
+        "title": "💎 Platinum — Elite Access",
+        "bullets": [
+            "✨ Priority replies",
+            "🎥 Video-call slots (limited)",
+            "🤝 Meet & greet access",
+            "🕒 Early RSVP",
+            "🛍️ 15% merch codes*",
+            "🎬 Backstage moments",
+            "🧱 Name on the wall",
+            "🎁 Surprise drops",
+            "🔁 Loyalty “reroll”",
+        ],
+    },
+    "premium": {
+        "title": "🏆 Premium — Inner Circle",
+        "bullets": [
+            "⚡️ Priority sorting",
+            "🎥 Limited video calls",
+            "🤝 Meet & greet lottery",
+            "🕒 RSVP window",
+            "🛍️ 10% merch codes*",
+            "🎧 Monthly “uncut” clip",
+            "🗝️ Secret newsletter clues",
+        ],
+    },
+    "gold": {
+        "title": "🥇 Gold — VIP Member",
+        "bullets": [
+            "📈 Fast-track points",
+            "🛎️ Early merch pings",
+            "🎥 Limited video calls",
+            "🤝 Meet & greet windows",
+            "🔦 Fan spotlight",
+            "🎂 Birthday shout-out",
+            "📲 Wallpapers & ringtones",
+            "🗳️ Early polls",
+        ],
+    },
+    "silver": {
+        "title": "🥈 Silver — Active Supporter",
+        "bullets": [
+            "🫥 Hidden posts",
+            "🎁 Giveaways",
+            "🎥 Video-call queue",
+            "🤝 Meet & greet window",
+            "📲 Wallpaper pack",
+            "🗳️ Polls",
+            "💠 Sticker pack",
+        ],
+    },
+    "bronze": {
+        "title": "🥉 Bronze — Loyal Fan",
+        "bullets": [
+            "⏱️ Early previews",
+            "🎁 Giveaways",
+            "🎥 Group video calls",
+            "🎟️ Meet & greet lottery",
+            "🎲 Mystery reward",
+            "❓ Bronze Q&A thread",
+        ],
+    },
+    "regular": {
+        "title": "🎟 Regular — Basic Access",
+        "bullets": [
+            "📣 Community updates",
+            "🎁 Occasional giveaways",
+            "🎥 Group-call raffles",
+            "⏳ Meet & greet waitlist",
+        ],
+    },
+}
 
 # ===== Static uploads =====
 @app.route("/uploads/<path:fname>")
@@ -156,8 +229,15 @@ def checkout():
     order = session.get("pending_order")
     if not order:
         return redirect(url_for("client"))
-    price_cents = PACKAGE_PRICES.get(order["client"]["package"], 50000)
-    return render_template("checkout.html", order=order, price_usd=price_cents//100)
+    pkg = (order["client"].get("package") or "regular").lower()
+    price_cents = PACKAGE_PRICES.get(pkg, 50000)
+    perks = PACKAGE_PERKS.get(pkg)
+    return render_template(
+        "checkout.html",
+        order=order,
+        price_usd=price_cents // 100,
+        perks=perks,           # <-- add this
+    )
 
 @app.route("/payment/options")
 def payment_options():
@@ -362,6 +442,6 @@ def apple_pay_verification():
 @app.route("/terms")
 def terms():
     return render_template("terms.html")
-    
+
 if __name__ == "__main__":
     app.run(debug=True)

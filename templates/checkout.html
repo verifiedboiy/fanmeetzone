@@ -4,6 +4,20 @@
   <h2>Checkout</h2>
   <p>Ticket: <b>{{ order.ticket_id }}</b></p>
   <p>Package: <b>{{ order.client.package|title }}</b> — Amount: <b>${{ price_usd }}</b></p>
+  {% if perks %}
+
+<div style="margin-top:14px; border:1px solid #243552; background:#0e1a2a; border-radius:10px; padding:14px;">
+  <div style="font-weight:700; font-size:1.05rem; margin-bottom:8px;">
+  {{ perks.title }} <span style="opacity:.7; font-weight:600">• ${{ price_usd }}/yr</span>
+</div>
+  <ul style="margin:0; padding-left:18px; line-height:1.5;">
+    {% for b in perks.bullets %}
+      <li>{{ b }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
   <a class="btn" href="{{ url_for('payment_options') }}">Proceed to Payment →</a>
 </section>
 {% endblock %}
