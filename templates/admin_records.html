@@ -1,13 +1,31 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  /* tiny badges that match your dark theme */
+  .badge {
+    display:inline-block; padding:3px 8px; border-radius:999px;
+    font-size:.8rem; line-height:1; border:1px solid #2a3b57; background:#0f1a2b;
+  }
+  .badge.square { border-color:#3a7bd5; }
+  .badge.gift   { border-color:#c58af9; }
+  .badge.crypto { border-color:#00c896; }
+  .pill {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 8px; border-radius:8px; border:1px solid #2a3b57; background:#0f1a2b;
+  }
+  .copy-btn { cursor:pointer; border:1px solid #2a3b57; border-radius:6px; padding:2px 6px; }
+</style>
+
 <section class="card">
   <h2>Admin • Records</h2>
+
   {% if records|length == 0 %}
     <p>No records yet.</p>
   {% else %}
     <div style="display:grid; gap:12px;">
       {% for r in records %}
         <div style="border:1px solid #2a3b57; border-radius:8px; padding:12px;">
+          <!-- top row -->
           <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
             <div>
               <div style="opacity:.8;">Ticket</div>
@@ -15,7 +33,8 @@
             </div>
             <div>
               <div style="opacity:.8;">Client</div>
-              {{ r.client.full_name or '—' }} <span style="opacity:.7;">({{ r.client.email or '—' }})</span>
+              {{ r.client.full_name or '—' }}
+              <span style="opacity:.7;">({{ r.client.email or '—' }})</span>
             </div>
             <div>
               <div style="opacity:.8;">Package</div>
@@ -32,20 +51,45 @@
           </div>
 
           {% if r.payment_info %}
-            <div style="margin-top:8px; font-size:.95rem;">
+            <div style="margin-top:10px; font-size:.95rem;">
               <div style="opacity:.8;">Payment</div>
-              <div>
-                {{ r.payment_info.method }}
-                {% if r.payment_info.payment_id %} • <span style="opacity:.8;">{{ r.payment_info.payment_id }}</span>{% endif %}
-                {% if r.payment_info.session_id %} • <span style="opacity:.8;">{{ r.payment_info.session_id }}</span>{% endif %}
+
+              <!-- badges by method -->
+              {% set method = (r.payment_info.method or '') %}
+              {% if method == 'Square Card' %}
+                <span class="badge square">💳 Square Card</span>
+                {% if r.payment_info.payment_id %}
+                  <span style="opacity:.8;">• {{ r.payment_info.payment_id }}</span>
+                {% endif %}
+              {% elif method == 'Gift Card' %}
+                <span class="badge gift">🎁 Gift Card</span>
                 {% if r.payment_info.proof_url %}
                   • <a href="{{ r.payment_info.proof_url }}" target="_blank">View proof</a>
                 {% endif %}
-              </div>
+              {% elif method == 'Crypto' %}
+                <span class="badge crypto">🪙 Crypto</span>
+                {% if r.payment_info.coin %}
+                  <span class="pill" style="margin-left:6px;">{{ r.payment_info.coin }}</span>
+                {% endif %}
+                {% if r.payment_info.address %}
+                  <span class="pill" style="margin-left:6px; max-width:100%; overflow:hidden; text-overflow:ellipsis;">
+                    <code id="addr-{{ loop.index }}" style="max-width:58ch; display:inline-block; overflow:hidden; text-overflow:ellipsis;">
+                      {{ r.payment_info.address }}
+                    </code>
+                    <button type="button" class="copy-btn" data-copy-target="addr-{{ loop.index }}">Copy</button>
+                  </span>
+                {% endif %}
+                {% if r.payment_info.proof_url %}
+                  • <a href="{{ r.payment_info.proof_url }}" target="_blank">View screenshot</a>
+                {% endif %}
+              {% else %}
+                <span class="badge">Payment</span>
+              {% endif %}
             </div>
           {% endif %}
 
-          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+          <!-- actions -->
+          <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
             <a class="btn outline" href="{{ url_for('view_card', ticket_id=r.ticket_id) }}" target="_blank">Open Card</a>
 
             <form action="{{ url_for('admin_verify', ticket=r.ticket_id, action='approve') }}" method="POST">
@@ -56,8 +100,9 @@
               <button class="btn" type="submit">Reject</button>
             </form>
 
+            <!-- Delete -->
             <form action="{{ url_for('admin_delete', ticket=r.ticket_id) }}" method="POST" onsubmit="return confirm('Delete this record permanently?');">
-              <button class="btn danger" type="submit" style="background:#6e1a1a;">Delete</button>
+              <button class="btn" type="submit" style="background:#8b2e2e;">Delete</button>
             </form>
           </div>
         </div>
@@ -65,4 +110,23 @@
     </div>
   {% endif %}
 </section>
+
+<script>
+  // Copy buttons for crypto addresses
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-copy-target');
+      const el = document.getElementById(id);
+      if (!el) return;
+      try {
+        await navigator.clipboard.writeText(el.textContent.trim());
+        const old = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = old, 1200);
+      } catch (e) {
+        alert('Copy failed. Please copy manually.');
+      }
+    });
+  });
+</script>
 {% endblock %}

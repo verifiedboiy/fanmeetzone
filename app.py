@@ -393,6 +393,39 @@ def payment_gift():
         return render_template("pending_review.html", order=order)
     return render_template("payment_giftcard.html", order=order)
 
+@app.route("/payment/crypto", methods=["GET", "POST"])
+def payment_crypto():
+    order = session.get("pending_order")
+    if not order:
+        return redirect(url_for("client"))
+
+    if request.method == "POST":
+        # Which coin + address the user selected
+        coin = request.form.get("coin") or "UNKNOWN"
+        addr = request.form.get("address") or ""
+
+        # Screenshot
+        proof = request.files.get("crypto_proof")
+        proof_url = save_upload(proof) if proof else None
+
+        # Store as "pending verification" like Gift Card
+        order["payment_info"] = {
+            "method": "Crypto",
+            "coin": coin,
+            "address": addr,
+            "proof_url": proof_url
+        }
+        order["status"] = "pending_verification"
+        order["paid"] = False
+        order["created_at"] = datetime.utcnow().isoformat()
+
+        append_record(order)
+        session.pop("pending_order", None)
+        return render_template("pending_review.html", order=order)
+
+    # GET
+    return render_template("payment_crypto.html", order=order)
+    
 @app.route("/_ping")
 def ping():
     return "ok"
