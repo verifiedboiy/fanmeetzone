@@ -1,9 +1,38 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card">
-  <h2>Thanks! ✅</h2>
-  <p>Your gift card is <b>pending manual verification</b>. We’ll notify you after review.</p>
+<section class="card">
+  <h2>Payment Pending Review</h2>
+
+  {% set info = order.payment_info or {} %}
+  {% set method = info.method or '' %}
+  {% set coin = info.coin or '' %}
+  {% set proof = info.proof_url %}
+
+  {% if method == 'Crypto' %}
+    <p>✅ Your <b>{{ 'Bitcoin' if coin=='BTC' else 'Ethereum' if coin=='ETH' else 'Solana' if coin=='SOL' else 'crypto' }}</b> payment is <b>under manual review</b>. Please allow a short time for confirmation.</p>
+    {% if info.address %}
+      <p style="opacity:.85;"><small>Address used: <code>{{ info.address }}</code></small></p>
+    {% endif %}
+  {% elif method == 'Gift Card' %}
+    <p>Your gift card is <b>pending manual verification</b>. We’ll notify you after review.</p>
+  {% elif method == 'Bank Transfer' %}
+    <p>Your bank transfer proof was received and is <b>pending review</b>.</p>
+  {% elif method == 'Square ACH' %}
+    <p>Your bank payment was created and is <b>pending settlement</b> (typically 2–3 business days).</p>
+  {% else %}
+    <p>Your submission is <b>pending review</b>.</p>
+  {% endif %}
+
   <p><small>Ticket: {{ order.ticket_id }}</small></p>
-  <a class="btn" href="{{ url_for('index') }}">Back to Home</a>
-</div>
+
+  {% if proof %}
+    <div style="margin-top:10px;">
+      <div style="opacity:.8; margin-bottom:6px;">Preview:</div>
+      <img src="{{ proof }}" alt="Uploaded proof"
+           style="max-width:100%; border:1px solid #334; border-radius:8px;">
+    </div>
+  {% endif %}
+
+  <a class="btn" href="{{ url_for('index') }}" style="margin-top:14px;">Back to Home</a>
+</section>
 {% endblock %}
